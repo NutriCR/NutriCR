@@ -122,7 +122,11 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('inventario')
-      .select('id, nombre, stock, unidad_medida, categoria, created_at')
+      .select(
+        'id, nombre, stock, unidad_medida, categoria, ' +
+        'calorias_por_100g, proteinas_por_100g, carbohidratos_por_100g, grasas_por_100g, ' +
+        'fecha_vencimiento, created_at',
+      )
       .eq('nutriologo_id', TEST_NUTRIOLOGO_ID)
       .eq('categoria', 'tiquete-escaneado')
       .order('created_at', { ascending: false });

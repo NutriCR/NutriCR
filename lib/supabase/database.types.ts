@@ -232,6 +232,8 @@ export interface Database {
           carbohidratos_por_100g: number | null;
           grasas_por_100g: number | null;
           stock: number;
+          /** Requiere: ALTER TABLE inventario ADD COLUMN IF NOT EXISTS fecha_vencimiento date; */
+          fecha_vencimiento: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -246,6 +248,7 @@ export interface Database {
           carbohidratos_por_100g?: number | null;
           grasas_por_100g?: number | null;
           stock?: number;
+          fecha_vencimiento?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -260,6 +263,7 @@ export interface Database {
           carbohidratos_por_100g?: number | null;
           grasas_por_100g?: number | null;
           stock?: number;
+          fecha_vencimiento?: string | null;
           updated_at?: string;
         };
         Relationships: [

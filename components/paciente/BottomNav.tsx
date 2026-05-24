@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/paciente/inicio', label: 'Inicio', icon: '🏠' },
-  { href: '/paciente/plan', label: 'Plan', icon: '📋' },
-  { href: '/paciente/escanear', label: 'Escanear', icon: '📷', fab: true },
-  { href: '/paciente/recetas', label: 'Recetas', icon: '🍽️' },
-  { href: '/paciente/perfil', label: 'Perfil', icon: '👤' },
+  { href: '/paciente/inicio',   label: 'Inicio',   icon: '🏠' },
+  { href: '/paciente/plan',     label: 'Plan',      icon: '📋' },
+  { href: '/paciente/escanear', label: 'Escanear',  icon: '📷', fab: true },
+  { href: '/paciente/despensa', label: 'Despensa',  icon: '🥫' },
+  { href: '/paciente/perfil',   label: 'Perfil',    icon: '👤' },
 ];
 
 export default function BottomNav() {
