@@ -104,16 +104,32 @@ function StatCard({
 
 function SkeletonRow() {
   return (
-    <div className="flex items-center gap-4 px-4 py-3 animate-pulse">
-      <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-3.5 bg-slate-100 rounded w-36" />
-        <div className="h-3 bg-slate-100 rounded w-48" />
+    <div className="px-4 py-4 md:px-5 md:py-3.5 animate-pulse border-b border-slate-50">
+      {/* Mobile skeleton */}
+      <div className="flex items-start gap-3 md:hidden">
+        <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="flex justify-between gap-2">
+            <div className="h-3.5 bg-slate-100 rounded w-32" />
+            <div className="h-3.5 bg-slate-100 rounded w-8" />
+          </div>
+          <div className="h-3 bg-slate-100 rounded w-44" />
+          <div className="h-5 bg-slate-100 rounded-full w-16 mt-1" />
+          <div className="h-1.5 bg-slate-100 rounded-full w-full" />
+        </div>
       </div>
-      <div className="w-24 h-3 bg-slate-100 rounded" />
-      <div className="w-32 h-2 bg-slate-100 rounded" />
-      <div className="w-16 h-6 bg-slate-100 rounded-full" />
-      <div className="w-20 h-7 bg-slate-100 rounded-lg" />
+      {/* Desktop skeleton */}
+      <div className="hidden md:flex items-center gap-4">
+        <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-3.5 bg-slate-100 rounded w-36" />
+          <div className="h-3 bg-slate-100 rounded w-48" />
+        </div>
+        <div className="w-24 h-3 bg-slate-100 rounded" />
+        <div className="w-32 h-2 bg-slate-100 rounded" />
+        <div className="w-16 h-6 bg-slate-100 rounded-full" />
+        <div className="w-20 h-7 bg-slate-100 rounded-lg" />
+      </div>
     </div>
   );
 }
@@ -361,9 +377,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Encabezados de tabla */}
-        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_100px_90px] gap-4 px-5 py-2.5 bg-slate-50 border-b border-slate-100">
-          {['Paciente', 'Objetivo', 'Adherencia semanal', 'Estado', 'Acciones'].map((h) => (
+        {/* Encabezados de tabla — solo desktop */}
+        <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_104px_92px] gap-4 px-5 py-2.5 bg-slate-50 border-b border-slate-100">
+          {['Paciente', 'Objetivo', 'Adherencia semanal', 'Estado', 'Acción'].map((h) => (
             <span key={h} className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
               {h}
             </span>
@@ -372,101 +388,161 @@ export default function DashboardPage() {
 
         {/* Filas */}
         {loading ? (
-          <div className="divide-y divide-slate-50">
+          <div>
             {[1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
           </div>
         ) : pacientesFiltrados.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <span className="text-4xl">
-              {busqueda ? '🔍' : '👥'}
-            </span>
+            <span className="text-4xl">{busqueda ? '🔍' : '👥'}</span>
             <p className="font-medium text-slate-600">
               {busqueda ? `Sin resultados para "${busqueda}"` : 'Sin pacientes aún'}
             </p>
             {!busqueda && (
-              <button
-                onClick={abrirModal}
-                className="text-sm text-brand-600 hover:underline"
-              >
+              <button onClick={abrirModal} className="text-sm text-brand-600 hover:underline">
                 Agregar primer paciente →
               </button>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-100">
             {pacientesFiltrados.map((p) => {
-              const estado = getEstado(p.adherencia);
-              return (
-                <div
-                  key={p.id}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_100px_90px] gap-4 px-5 py-3.5 items-center hover:bg-slate-50/70 transition-colors"
-                >
-                  {/* Avatar + nombre */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0">
-                      {initiales(p.nombre, p.apellido)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
-                        {p.nombre} {p.apellido ?? ''}
-                      </p>
-                      <p className="text-xs text-slate-400 truncate">{p.email}</p>
-                    </div>
-                  </div>
+              const estado   = getEstado(p.adherencia);
+              const isMock   = p.id.startsWith('mock-');
+              const nombreCompleto = `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}`;
 
-                  {/* Objetivo */}
-                  <div>
-                    {p.objetivo ? (
-                      <span className="inline-block text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full truncate max-w-full">
-                        {p.objetivo}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-300">—</span>
+              const EstadoBadge = () => (
+                <span className={cn(
+                  'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap',
+                  estado.bg, estado.text,
+                )}>
+                  <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', estado.dot)} />
+                  {estado.label}
+                </span>
+              );
+
+              const BarraAdherencia = () => (
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={cn('h-1.5 rounded-full transition-all duration-700', getBarColor(p.adherencia))}
+                    style={{ width: `${p.adherencia}%` }}
+                  />
+                </div>
+              );
+
+              const BtnPerfil = ({ className }: { className?: string }) => (
+                <button
+                  disabled={isMock}
+                  title={isMock ? 'Disponible con pacientes reales' : 'Ver perfil'}
+                  className={cn(
+                    'text-xs font-medium transition-colors px-3 py-1.5 rounded-lg whitespace-nowrap',
+                    isMock
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : 'text-brand-600 hover:text-brand-800 hover:bg-brand-50',
+                    className,
+                  )}
+                >
+                  Ver perfil →
+                </button>
+              );
+
+              return (
+                <div key={p.id} className="hover:bg-slate-50/60 transition-colors">
+
+                  {/* ── Móvil: card apilada (<md) ── */}
+                  <div className="md:hidden px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {initiales(p.nombre, p.apellido)}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        {/* Fila 1: nombre + % */}
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800 truncate leading-tight">
+                            {nombreCompleto}
+                          </p>
+                          <span className="text-sm font-bold text-slate-700 tabular-nums flex-shrink-0">
+                            {p.adherencia}%
+                          </span>
+                        </div>
+
+                        {/* Fila 2: email */}
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{p.email}</p>
+
+                        {/* Fila 3: badge estado (su propia línea) */}
+                        <div className="mt-2">
+                          <EstadoBadge />
+                        </div>
+
+                        {/* Barra de progreso */}
+                        <div className="mt-2">
+                          <BarraAdherencia />
+                        </div>
+
+                        {/* Fila 4: última actividad + botón */}
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-slate-400">
+                            {p.ultimaActividad ? tiempoAtras(p.ultimaActividad) : '—'}
+                          </span>
+                          <BtnPerfil />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Objetivo — línea separada debajo si existe */}
+                    {p.objetivo && (
+                      <div className="mt-2 pl-12">
+                        <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">
+                          {p.objetivo}
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Adherencia */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-700">
-                        {p.adherencia}%
-                      </span>
-                      {p.ultimaActividad && (
-                        <span className="text-xs text-slate-400">
-                          {tiempoAtras(p.ultimaActividad)}
+                  {/* ── Desktop: fila de grid (≥md) ── */}
+                  <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_104px_92px] gap-4 px-5 py-3.5 items-center">
+                    {/* Avatar + nombre + email */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 text-sm font-bold flex items-center justify-center flex-shrink-0">
+                        {initiales(p.nombre, p.apellido)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{nombreCompleto}</p>
+                        <p className="text-xs text-slate-400 truncate">{p.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Objetivo */}
+                    <div className="min-w-0">
+                      {p.objetivo
+                        ? <span className="inline-block text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full truncate max-w-full">{p.objetivo}</span>
+                        : <span className="text-xs text-slate-300">—</span>
+                      }
+                    </div>
+
+                    {/* Adherencia: % + tiempo + barra */}
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-semibold text-slate-700 tabular-nums">
+                          {p.adherencia}%
                         </span>
-                      )}
+                        {p.ultimaActividad && (
+                          <span className="text-xs text-slate-400 truncate">
+                            {tiempoAtras(p.ultimaActividad)}
+                          </span>
+                        )}
+                      </div>
+                      <BarraAdherencia />
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className={cn('h-1.5 rounded-full transition-all duration-700', getBarColor(p.adherencia))}
-                        style={{ width: `${p.adherencia}%` }}
-                      />
-                    </div>
+
+                    {/* Estado badge */}
+                    <div><EstadoBadge /></div>
+
+                    {/* Botón */}
+                    <div><BtnPerfil /></div>
                   </div>
 
-                  {/* Estado badge */}
-                  <div>
-                    <span className={cn(
-                      'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full',
-                      estado.bg,
-                      estado.text,
-                    )}>
-                      <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', estado.dot)} />
-                      {estado.label}
-                    </span>
-                  </div>
-
-                  {/* Acciones */}
-                  <div>
-                    <button
-                      disabled={p.id.startsWith('mock-')}
-                      className="text-xs font-medium text-brand-600 hover:text-brand-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors px-3 py-1.5 rounded-lg hover:bg-brand-50 disabled:hover:bg-transparent"
-                      title={p.id.startsWith('mock-') ? 'Disponible con pacientes reales' : 'Ver perfil'}
-                    >
-                      Ver perfil →
-                    </button>
-                  </div>
                 </div>
               );
             })}
