@@ -1,0 +1,20 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/escanear-tiquete/route": "app/api/escanear-tiquete/route.js",
+  "/api/pacientes/route": "app/api/pacientes/route.js",
+  "/api/despensa/route": "app/api/despensa/route.js",
+  "/api/pagos/route": "app/api/pagos/route.js",
+  "/api/planes/route": "app/api/planes/route.js",
+  "/api/recetas/route": "app/api/recetas/route.js",
+  "/page": "app/page.js",
+  "/(paciente)/paciente/perfil/page": "app/(paciente)/paciente/perfil/page.js",
+  "/(paciente)/paciente/escanear/page": "app/(paciente)/paciente/escanear/page.js",
+  "/(nutriologo)/nutriologo/dashboard/page": "app/(nutriologo)/nutriologo/dashboard/page.js",
+  "/(paciente)/paciente/plan/page": "app/(paciente)/paciente/plan/page.js",
+  "/(nutriologo)/nutriologo/planes/page": "app/(nutriologo)/nutriologo/planes/page.js",
+  "/(nutriologo)/nutriologo/inventario/page": "app/(nutriologo)/nutriologo/inventario/page.js",
+  "/(paciente)/paciente/recetas/page": "app/(paciente)/paciente/recetas/page.js",
+  "/(paciente)/paciente/inicio/page": "app/(paciente)/paciente/inicio/page.js",
+  "/(nutriologo)/nutriologo/recetas/page": "app/(nutriologo)/nutriologo/recetas/page.js",
+  "/(nutriologo)/nutriologo/pacientes/page": "app/(nutriologo)/nutriologo/pacientes/page.js"
+}

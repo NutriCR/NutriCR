@@ -1,0 +1,113 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/_not-found/page-4b00f8e0855b1655.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/css/f5b55a30af14a16f.css",
+      "static/chunks/app/layout-3bfaf5f39a6ef215.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/972-bb7818cc5c812aed.js",
+      "static/chunks/app/page-2bd3796d22bc1b73.js"
+    ],
+    "/(paciente)/paciente/perfil/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(paciente)/paciente/perfil/page-962c5c85367747d9.js"
+    ],
+    "/(paciente)/layout": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/972-bb7818cc5c812aed.js",
+      "static/chunks/app/(paciente)/layout-300558844184d725.js"
+    ],
+    "/(paciente)/paciente/escanear/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(paciente)/paciente/escanear/page-52a2f244830be8d8.js"
+    ],
+    "/(nutriologo)/nutriologo/dashboard/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(nutriologo)/nutriologo/dashboard/page-a70ba6e7947575a6.js"
+    ],
+    "/(nutriologo)/layout": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/972-bb7818cc5c812aed.js",
+      "static/chunks/app/(nutriologo)/layout-320f94f35264bfb9.js"
+    ],
+    "/(paciente)/paciente/plan/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(paciente)/paciente/plan/page-0a9fe2ba813fc94d.js"
+    ],
+    "/(nutriologo)/nutriologo/planes/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(nutriologo)/nutriologo/planes/page-15f8b2391cdad84b.js"
+    ],
+    "/(nutriologo)/nutriologo/inventario/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(nutriologo)/nutriologo/inventario/page-6d80e1737c5b5d96.js"
+    ],
+    "/(paciente)/paciente/recetas/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(paciente)/paciente/recetas/page-b10b08954c286db7.js"
+    ],
+    "/(paciente)/paciente/inicio/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(paciente)/paciente/inicio/page-e0eee994b0a2ecd6.js"
+    ],
+    "/(nutriologo)/nutriologo/recetas/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(nutriologo)/nutriologo/recetas/page-e3b0c7bbc9c08900.js"
+    ],
+    "/(nutriologo)/nutriologo/pacientes/page": [
+      "static/chunks/webpack-16fd57b891a459c7.js",
+      "static/chunks/fd9d1056-5af6eea51486f846.js",
+      "static/chunks/117-bdf5b506ba796d53.js",
+      "static/chunks/main-app-8405bf7a636173cd.js",
+      "static/chunks/app/(nutriologo)/nutriologo/pacientes/page-111300b232cac63d.js"
+    ]
+  }
+}

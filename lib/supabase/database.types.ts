@@ -1,0 +1,410 @@
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+
+/**
+ * Tipos de base de datos generados para NutriCR.
+ *
+ * Estructura exigida por el SDK de Supabase (@supabase/supabase-js v2):
+ *   Database['public'] debe extender GenericSchema, que requiere:
+ *     { Tables: Record<string, GenericTable>, Views: ..., Functions: ... }
+ *
+ *   GenericTable requiere el campo Relationships: GenericRelationship[]
+ *   Sin él, Database['public'] no satisface GenericSchema y Schema resuelve
+ *   a never, haciendo que todos los tipos de .from() sean never[].
+ *
+ * Notas sobre Insert/Update:
+ *   - id es opcional (tiene DEFAULT gen_random_uuid() en Postgres)
+ *   - created_at / updated_at son opcionales (DEFAULT NOW() + triggers)
+ */
+export interface Database {
+  public: {
+    /**
+     * Views y Functions vacíos — requeridos por GenericSchema.
+     * Agregar entradas cuando se creen vistas o funciones RPC en Supabase.
+     */
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+
+    Tables: {
+      usuarios: {
+        Row: {
+          id: string;
+          email: string;
+          nombre: string;
+          apellido: string | null;
+          tipo_usuario: 'nutriologo' | 'paciente';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          nombre: string;
+          apellido?: string | null;
+          tipo_usuario: 'nutriologo' | 'paciente';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          nombre?: string;
+          apellido?: string | null;
+          tipo_usuario?: 'nutriologo' | 'paciente';
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      nutriologos: {
+        Row: {
+          id: string;
+          usuario_id: string;
+          numero_cedula: string | null;
+          especialidad: string | null;
+          descripcion: string | null;
+          foto_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          usuario_id: string;
+          numero_cedula?: string | null;
+          especialidad?: string | null;
+          descripcion?: string | null;
+          foto_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          usuario_id?: string;
+          numero_cedula?: string | null;
+          especialidad?: string | null;
+          descripcion?: string | null;
+          foto_url?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'nutriologos_usuario_id_fkey';
+            columns: ['usuario_id'];
+            isOneToOne: true;
+            referencedRelation: 'usuarios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      pacientes: {
+        Row: {
+          id: string;
+          usuario_id: string;
+          nutriologo_id: string | null;
+          fecha_nacimiento: string | null;
+          peso: number | null;
+          altura: number | null;
+          objetivo: string | null;
+          alergias: string[] | null;
+          condiciones_medicas: string[] | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          usuario_id: string;
+          nutriologo_id?: string | null;
+          fecha_nacimiento?: string | null;
+          peso?: number | null;
+          altura?: number | null;
+          objetivo?: string | null;
+          alergias?: string[] | null;
+          condiciones_medicas?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          usuario_id?: string;
+          nutriologo_id?: string | null;
+          fecha_nacimiento?: string | null;
+          peso?: number | null;
+          altura?: number | null;
+          objetivo?: string | null;
+          alergias?: string[] | null;
+          condiciones_medicas?: string[] | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'pacientes_usuario_id_fkey';
+            columns: ['usuario_id'];
+            isOneToOne: true;
+            referencedRelation: 'usuarios';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'pacientes_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      planes_nutricionales: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          nutriologo_id: string;
+          nombre: string;
+          descripcion: string | null;
+          fecha_inicio: string | null;
+          fecha_fin: string | null;
+          calorias_diarias: number | null;
+          proteinas_g: number | null;
+          carbohidratos_g: number | null;
+          grasas_g: number | null;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          nutriologo_id: string;
+          nombre: string;
+          descripcion?: string | null;
+          fecha_inicio?: string | null;
+          fecha_fin?: string | null;
+          calorias_diarias?: number | null;
+          proteinas_g?: number | null;
+          carbohidratos_g?: number | null;
+          grasas_g?: number | null;
+          activo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          paciente_id?: string;
+          nutriologo_id?: string;
+          nombre?: string;
+          descripcion?: string | null;
+          fecha_inicio?: string | null;
+          fecha_fin?: string | null;
+          calorias_diarias?: number | null;
+          proteinas_g?: number | null;
+          carbohidratos_g?: number | null;
+          grasas_g?: number | null;
+          activo?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'planes_nutricionales_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'planes_nutricionales_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      inventario: {
+        Row: {
+          id: string;
+          nutriologo_id: string;
+          nombre: string;
+          categoria: string | null;
+          unidad_medida: string | null;
+          calorias_por_100g: number | null;
+          proteinas_por_100g: number | null;
+          carbohidratos_por_100g: number | null;
+          grasas_por_100g: number | null;
+          stock: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nutriologo_id: string;
+          nombre: string;
+          categoria?: string | null;
+          unidad_medida?: string | null;
+          calorias_por_100g?: number | null;
+          proteinas_por_100g?: number | null;
+          carbohidratos_por_100g?: number | null;
+          grasas_por_100g?: number | null;
+          stock?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          nutriologo_id?: string;
+          nombre?: string;
+          categoria?: string | null;
+          unidad_medida?: string | null;
+          calorias_por_100g?: number | null;
+          proteinas_por_100g?: number | null;
+          carbohidratos_por_100g?: number | null;
+          grasas_por_100g?: number | null;
+          stock?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inventario_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      recetas_generadas: {
+        Row: {
+          id: string;
+          plan_nutricional_id: string | null;
+          paciente_id: string | null;
+          nutriologo_id: string | null;
+          nombre: string;
+          descripcion: string | null;
+          ingredientes: Json | null;
+          instrucciones: string | null;
+          calorias: number | null;
+          tiempo_preparacion: number | null;
+          tipo_comida: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
+          generada_por_ia: boolean;
+          prompt_usado: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_nutricional_id?: string | null;
+          paciente_id?: string | null;
+          nutriologo_id?: string | null;
+          nombre: string;
+          descripcion?: string | null;
+          ingredientes?: Json | null;
+          instrucciones?: string | null;
+          calorias?: number | null;
+          tiempo_preparacion?: number | null;
+          tipo_comida?: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
+          generada_por_ia?: boolean;
+          prompt_usado?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_nutricional_id?: string | null;
+          paciente_id?: string | null;
+          nutriologo_id?: string | null;
+          nombre?: string;
+          descripcion?: string | null;
+          ingredientes?: Json | null;
+          instrucciones?: string | null;
+          calorias?: number | null;
+          tiempo_preparacion?: number | null;
+          tipo_comida?: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
+          generada_por_ia?: boolean;
+          prompt_usado?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recetas_generadas_plan_nutricional_id_fkey';
+            columns: ['plan_nutricional_id'];
+            isOneToOne: false;
+            referencedRelation: 'planes_nutricionales';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recetas_generadas_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recetas_generadas_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      pagos: {
+        Row: {
+          id: string;
+          nutriologo_id: string;
+          paciente_id: string;
+          monto: number;
+          moneda: string;
+          estado: 'pendiente' | 'completado' | 'fallido' | 'reembolsado';
+          stripe_payment_intent_id: string | null;
+          stripe_customer_id: string | null;
+          descripcion: string | null;
+          fecha_pago: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nutriologo_id: string;
+          paciente_id: string;
+          monto: number;
+          moneda?: string;
+          estado?: 'pendiente' | 'completado' | 'fallido' | 'reembolsado';
+          stripe_payment_intent_id?: string | null;
+          stripe_customer_id?: string | null;
+          descripcion?: string | null;
+          fecha_pago?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          nutriologo_id?: string;
+          paciente_id?: string;
+          monto?: number;
+          moneda?: string;
+          estado?: 'pendiente' | 'completado' | 'fallido' | 'reembolsado';
+          stripe_payment_intent_id?: string | null;
+          stripe_customer_id?: string | null;
+          descripcion?: string | null;
+          fecha_pago?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'pagos_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'pagos_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+    };
+  };
+}
