@@ -167,6 +167,8 @@ export interface Database {
           proteinas_g: number | null;
           carbohidratos_g: number | null;
           grasas_g: number | null;
+          /** Requiere: ALTER TABLE planes_nutricionales ADD COLUMN IF NOT EXISTS restricciones_dieteticas text[]; */
+          restricciones_dieteticas: string[] | null;
           activo: boolean;
           created_at: string;
           updated_at: string;
@@ -183,6 +185,7 @@ export interface Database {
           proteinas_g?: number | null;
           carbohidratos_g?: number | null;
           grasas_g?: number | null;
+          restricciones_dieteticas?: string[] | null;
           activo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -199,6 +202,7 @@ export interface Database {
           proteinas_g?: number | null;
           carbohidratos_g?: number | null;
           grasas_g?: number | null;
+          restricciones_dieteticas?: string[] | null;
           activo?: boolean;
           updated_at?: string;
         };
@@ -405,6 +409,92 @@ export interface Database {
             columns: ['paciente_id'];
             isOneToOne: false;
             referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      mediciones_inbody: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          fecha: string;
+          peso: number | null;
+          grasa_porcentaje: number | null;
+          musculo_kg: number | null;
+          agua_porcentaje: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          fecha: string;
+          peso?: number | null;
+          grasa_porcentaje?: number | null;
+          musculo_kg?: number | null;
+          agua_porcentaje?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          paciente_id?: string;
+          fecha?: string;
+          peso?: number | null;
+          grasa_porcentaje?: number | null;
+          musculo_kg?: number | null;
+          agua_porcentaje?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mediciones_inbody_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      notas: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          nutriologo_id: string;
+          mensaje: string;
+          fecha: string;
+          leida: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          nutriologo_id: string;
+          mensaje: string;
+          fecha?: string;
+          leida?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          paciente_id?: string;
+          nutriologo_id?: string;
+          mensaje?: string;
+          fecha?: string;
+          leida?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'notas_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'notas_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
             referencedColumns: ['id'];
           },
         ];

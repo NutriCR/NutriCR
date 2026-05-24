@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -429,21 +430,28 @@ export default function DashboardPage() {
                 </div>
               );
 
-              const BtnPerfil = ({ className }: { className?: string }) => (
-                <button
-                  disabled={isMock}
-                  title={isMock ? 'Disponible con pacientes reales' : 'Ver perfil'}
-                  className={cn(
-                    'text-xs font-medium transition-colors px-3 py-1.5 rounded-lg whitespace-nowrap',
-                    isMock
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'text-brand-600 hover:text-brand-800 hover:bg-brand-50',
-                    className,
-                  )}
-                >
-                  Ver perfil →
-                </button>
-              );
+              const BtnPerfil = ({ className }: { className?: string }) =>
+                isMock ? (
+                  <span
+                    title="Disponible con pacientes reales"
+                    className={cn(
+                      'text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-300 cursor-not-allowed select-none',
+                      className,
+                    )}
+                  >
+                    Ver perfil →
+                  </span>
+                ) : (
+                  <Link
+                    href={`/nutriologo/pacientes/${p.id}`}
+                    className={cn(
+                      'text-xs font-medium transition-colors px-3 py-1.5 rounded-lg whitespace-nowrap text-brand-600 hover:text-brand-800 hover:bg-brand-50',
+                      className,
+                    )}
+                  >
+                    Ver perfil →
+                  </Link>
+                );
 
               return (
                 <div key={p.id} className="hover:bg-slate-50/60 transition-colors">
