@@ -4,7 +4,24 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('version'\\)\\); print\\(list\\(d.get\\('exports',{}\\).keys\\(\\)\\)[:5]\\)\")",
       "Bash(npm run *)",
       "Bash(node -e \"require\\('@supabase/supabase-js/dist/module/lib/types'\\)\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(git -C /Users/macdejose/NutriCR log --oneline -5)",
+      "Bash(git -C /Users/macdejose/NutriCR ls-files app/page.tsx app/layout.tsx app/globals.css)",
+      "Bash(git -C /Users/macdejose/NutriCR ls-files app/)",
+      "Bash(git -C /Users/macdejose/NutriCR remote -v)",
+      "Bash(git -C /Users/macdejose/NutriCR status)",
+      "Bash(git -C /Users/macdejose/NutriCR diff HEAD~1..HEAD --name-only)",
+      "Bash(git -C /Users/macdejose/NutriCR ls-files)",
+      "Bash(git -C /Users/macdejose/NutriCR rm -r --cached .next/ .env.local .env.local.save)",
+      "Bash(git -C /Users/macdejose/NutriCR status --short)",
+      "Bash(git -C /Users/macdejose/NutriCR add .gitignore)",
+      "Bash(git -C /Users/macdejose/NutriCR commit -m ' *)",
+      "WebFetch(domain:nutricr-app.vercel.app)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(mkdir -p /Users/macdejose/NutriCR/app/api/despensa/\\\\[id\\\\])",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
