@@ -21,7 +21,8 @@
       "Bash(mkdir -p /Users/macdejose/NutriCR/app/api/despensa/\\\\[id\\\\])",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npm install *)"
     ]
   }
 }
