@@ -76,6 +76,23 @@ function generarCodigo(): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// Componente definido fuera del render para evitar que React lo destruya/recree
+// en cada actualización de estado, lo que quebraría los eventos de click.
+function BtnPerfil({ id, className }: { id: string; className?: string }) {
+  return (
+    <Link
+      href={`/nutriologo/pacientes/${id}`}
+      className={cn(
+        'text-xs font-medium transition-colors px-3 py-1.5 rounded-lg whitespace-nowrap',
+        'text-brand-600 hover:text-brand-800 hover:bg-brand-50',
+        className,
+      )}
+    >
+      Ver perfil →
+    </Link>
+  );
+}
+
 function StatCard({
   icon,
   label,
@@ -407,8 +424,7 @@ export default function DashboardPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {pacientesFiltrados.map((p) => {
-              const estado   = getEstado(p.adherencia);
-              const isMock   = p.id.startsWith('mock-');
+              const estado        = getEstado(p.adherencia);
               const nombreCompleto = `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}`;
 
               const EstadoBadge = () => (
@@ -429,29 +445,6 @@ export default function DashboardPage() {
                   />
                 </div>
               );
-
-              const BtnPerfil = ({ className }: { className?: string }) =>
-                isMock ? (
-                  <span
-                    title="Disponible con pacientes reales"
-                    className={cn(
-                      'text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-300 cursor-not-allowed select-none',
-                      className,
-                    )}
-                  >
-                    Ver perfil →
-                  </span>
-                ) : (
-                  <Link
-                    href={`/nutriologo/pacientes/${p.id}`}
-                    className={cn(
-                      'text-xs font-medium transition-colors px-3 py-1.5 rounded-lg whitespace-nowrap text-brand-600 hover:text-brand-800 hover:bg-brand-50',
-                      className,
-                    )}
-                  >
-                    Ver perfil →
-                  </Link>
-                );
 
               return (
                 <div key={p.id} className="hover:bg-slate-50/60 transition-colors">
@@ -493,7 +486,7 @@ export default function DashboardPage() {
                           <span className="text-xs text-slate-400">
                             {p.ultimaActividad ? tiempoAtras(p.ultimaActividad) : '—'}
                           </span>
-                          <BtnPerfil />
+                          <BtnPerfil id={p.id} />
                         </div>
                       </div>
                     </div>
@@ -548,7 +541,7 @@ export default function DashboardPage() {
                     <div><EstadoBadge /></div>
 
                     {/* Botón */}
-                    <div><BtnPerfil /></div>
+                    <div><BtnPerfil id={p.id} /></div>
                   </div>
 
                 </div>
