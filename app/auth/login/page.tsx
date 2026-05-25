@@ -17,23 +17,22 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log('iniciando login');
     setDebugInfo('▶ handleSubmit ejecutado — conectando con Supabase…');
-    console.log('[login] handleSubmit ejecutado | email:', email.trim());
     setLoading(true);
     setError(null);
 
     try {
       const supabase = createClient();
-      console.log('[login] llamando signInWithPassword…');
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password,
       });
 
+      console.log('resultado supabase:', data, authError);
       const debugMsg = `Supabase → user:${data?.user?.id ? 'ok' : 'null'} session:${data?.session ? 'ok' : 'null'} error:${authError?.message ?? 'ninguno'}`;
       setDebugInfo(debugMsg);
-      console.log('[login] respuesta Supabase | user:', data?.user?.id ?? 'null', '| session:', data?.session ? 'ok' : 'null', '| error:', authError?.message ?? 'null', '| status:', authError?.status ?? '-');
 
       // ── Error de autenticación ───────────────────────────────────────────────
       if (authError) {
@@ -59,7 +58,7 @@ function LoginForm() {
       const tipo     = data.user.user_metadata?.tipo_usuario as string | undefined;
       const destino  = safeNext ?? (tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard');
 
-      console.log('[login] navegando a:', destino, '| tipo_usuario:', tipo ?? 'undefined', '| safeNext:', safeNext ?? 'null');
+      console.log('redirigiendo a dashboard');
       window.location.href = destino;
 
     } catch (err) {
