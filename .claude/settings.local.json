@@ -24,7 +24,8 @@
       "Bash(git push *)",
       "Bash(npm install *)",
       "Bash(node -e \"const s = require\\('@supabase/ssr'\\); console.log\\(Object.keys\\(s\\)\\)\")",
-      "Bash(git -C /Users/macdejose/NutriCR diff app/api/pacientes/\\\\[id\\\\]/route.ts)"
+      "Bash(git -C /Users/macdejose/NutriCR diff app/api/pacientes/\\\\[id\\\\]/route.ts)",
+      "Bash(xargs ls -la)"
     ]
   }
 }
