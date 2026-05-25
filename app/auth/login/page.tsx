@@ -13,12 +13,9 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log('iniciando login');
-    setDebugInfo('▶ handleSubmit ejecutado — conectando con Supabase…');
     setLoading(true);
     setError(null);
 
@@ -30,13 +27,8 @@ function LoginForm() {
         password,
       });
 
-      console.log('resultado supabase:', data, authError);
-      const debugMsg = `Supabase → user:${data?.user?.id ? 'ok' : 'null'} session:${data?.session ? 'ok' : 'null'} error:${authError?.message ?? 'ninguno'}`;
-      setDebugInfo(debugMsg);
-
       // ── Error de autenticación ───────────────────────────────────────────────
       if (authError) {
-        console.error('[login] authError completo:', authError);
         if (authError.message === 'Email not confirmed') {
           setError('Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
         } else if (authError.message === 'Invalid login credentials') {
@@ -48,7 +40,6 @@ function LoginForm() {
       }
 
       if (!data.user) {
-        console.error('[login] data.user es null sin error de Supabase');
         setError('No se pudo obtener la sesión. Intenta de nuevo.');
         return;
       }
@@ -58,11 +49,9 @@ function LoginForm() {
       const tipo     = data.user.user_metadata?.tipo_usuario as string | undefined;
       const destino  = safeNext ?? (tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard');
 
-      console.log('redirigiendo a dashboard');
       window.location.href = destino;
 
     } catch (err) {
-      console.error('[login] excepción capturada:', err);
       setError(err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.');
     } finally {
       setLoading(false);
@@ -112,13 +101,6 @@ function LoginForm() {
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Iniciar sesión</h2>
           <p className="text-slate-400 text-sm mb-8">Ingresa tus credenciales para continuar.</p>
-
-          {/* Panel de diagnóstico temporal — remover tras resolver el bug */}
-          {debugInfo && (
-            <div className="mb-4 bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3">
-              <p className="text-xs font-mono text-yellow-800 break-all">🔍 {debugInfo}</p>
-            </div>
-          )}
 
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
