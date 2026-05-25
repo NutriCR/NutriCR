@@ -1,12 +1,11 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 function LoginForm() {
-  const router       = useRouter();
   const searchParams = useSearchParams();
   const next         = searchParams.get('next');
 
@@ -20,27 +19,54 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email:    email.trim(),
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email:    email.trim(),
+        password,
+      });
 
-    if (authError) {
-      setError(
-        authError.message === 'Invalid login credentials'
-          ? 'Email o contraseña incorrectos.'
-          : authError.message,
-      );
+      // ── Error de autenticación ───────────────────────────────────────────────
+      if (authError) {
+        if (authError.message === 'Email not confirmed') {
+          setError('Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        } else if (authError.message === 'Invalid login credentials') {
+          setError('Email o contraseña incorrectos.');
+        } else {
+          setError(authError.message);
+        }
+        return;    // finally → setLoading(false)
+      }
+
+      if (!data.user) {
+        setError('No se pudo obtener la sesión. Intenta de nuevo.');
+        return;
+      }
+
+      // ── Determinar destino ───────────────────────────────────────────────────
+      // Validar `next` para evitar open-redirect (solo paths relativos)
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+      const tipo     = data.user.user_metadata?.tipo_usuario as string | undefined;
+      const destino  = safeNext ?? (tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard');
+
+      // ── Navegar con hard-navigation ──────────────────────────────────────────
+      // Usamos window.location.href en lugar de router.push() por dos razones:
+      // 1. Garantiza que el middleware del servidor recibe las cookies recién
+      //    seteadas por Supabase (evita carreras con el caché de RSC).
+      // 2. Si la navegación no ocurre (ej: el middleware rechaza),
+      //    la recarga completa resetea el estado de React y muestra el login limpio.
+      window.location.href = destino;
+
+      // No llamar setLoading(false) aquí: la página se descarga al navegar.
+      // Si por alguna razón no navega, el finally lo resetea.
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.');
+    } finally {
+      // Siempre liberar el botón: tanto en error como si window.location.href
+      // no dispara la descarga inmediata (raro, pero defensivo).
       setLoading(false);
-      return;
     }
-
-    // Redirigir según tipo de usuario
-    const tipo = data.user?.user_metadata?.tipo_usuario as string | undefined;
-    const destino = next ?? (tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard');
-    router.push(destino);
-    router.refresh();
   }
 
   return (
@@ -130,7 +156,17 @@ function LoginForm() {
               disabled={loading}
               className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-brand-400 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
             >
-              {loading ? 'Ingresando…' : 'Iniciar sesión'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Ingresando…
+                </span>
+              ) : (
+                'Iniciar sesión'
+              )}
             </button>
           </form>
 
