@@ -42,13 +42,52 @@ export async function requireNutriologo(): Promise<AuthResult<NutriologoSession>
     const { data: { user } } = await createAuthClient().auth.getUser();
     if (!user) return { ok: false, response: unauthorized() };
 
-    const { data } = await createAdminClient()
+    const admin = createAdminClient();
+
+    // Buscar la fila en nutriologos
+    let { data } = await admin
       .from('nutriologos')
       .select('id')
       .eq('usuario_id', user.id)
       .single();
 
-    if (!data) return { ok: false, response: forbidden('Nutriólogo no encontrado') };
+    // Si no existe la fila pero el JWT declara tipo_usuario = 'nutriologo',
+    // la creamos automáticamente. Esto cubre cuentas creadas directamente en
+    // el dashboard de Supabase sin pasar por el flujo de registro.
+    if (!data) {
+      const tipoMeta = user.user_metadata?.tipo_usuario as string | undefined;
+      if (tipoMeta !== 'nutriologo') {
+        return { ok: false, response: forbidden('Nutriólogo no encontrado') };
+      }
+
+      console.warn('[requireNutriologo] Fila faltante — auto-provisionando nutriologo para userId:', user.id);
+
+      // Asegurar fila en usuarios
+      await admin.from('usuarios').upsert(
+        {
+          id:           user.id,
+          email:        user.email ?? '',
+          nombre:       (user.user_metadata?.nombre as string | undefined) ?? 'Nutriólogo',
+          apellido:     (user.user_metadata?.apellido as string | undefined) ?? null,
+          tipo_usuario: 'nutriologo',
+        },
+        { onConflict: 'id' },
+      );
+
+      // Crear fila en nutriologos
+      const { data: created, error: insertErr } = await admin
+        .from('nutriologos')
+        .insert({ usuario_id: user.id })
+        .select('id')
+        .single();
+
+      if (insertErr || !created) {
+        console.error('[requireNutriologo] insert nutriologos falló:', insertErr?.message);
+        return { ok: false, response: forbidden('Nutriólogo no encontrado') };
+      }
+
+      data = created;
+    }
 
     return { ok: true, data: { userId: user.id, nutriologoId: data.id } };
   } catch {
