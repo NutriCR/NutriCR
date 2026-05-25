@@ -12,6 +12,19 @@ import { NextResponse, type NextRequest } from 'next/server';
  * requirePaciente() dentro de cada Route Handler con createAdminClient().
  */
 
+// ─── Helpers base64url ────────────────────────────────────────────────────────
+
+/**
+ * Convierte una cadena base64url a string.
+ * Usado para decodificar el payload del JWT y el valor de las cookies
+ * de @supabase/ssr v0.5+ que usa cookieEncoding: "base64url" por defecto.
+ */
+function base64URLToString(b64url: string): string {
+  const base64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded  = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+  return atob(padded);
+}
+
 // ─── JWT decode ───────────────────────────────────────────────────────────────
 
 /**
@@ -22,10 +35,7 @@ function decodeJWTPayload(token: string): Record<string, unknown> | null {
   try {
     const part = token.split('.')[1];
     if (!part) return null;
-    // base64url → base64 estándar → decodificar
-    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-    const padded  = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-    return JSON.parse(atob(padded)) as Record<string, unknown>;
+    return JSON.parse(base64URLToString(part)) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -62,7 +72,17 @@ function getSessionUser(request: NextRequest): SessionUser | null {
 
   try {
     const raw = chunks.map((c) => decodeURIComponent(c.value)).join('');
-    const session = JSON.parse(raw) as {
+
+    // @supabase/ssr ≥ 0.5 almacena la cookie con cookieEncoding "base64url"
+    // por defecto, prefijando el valor con "base64-".
+    // Si no se decodifica antes del JSON.parse, éste falla silenciosamente
+    // y el middleware devuelve null (sin sesión) aunque el login fue exitoso.
+    const BASE64_PREFIX = 'base64-';
+    const jsonStr = raw.startsWith(BASE64_PREFIX)
+      ? base64URLToString(raw.slice(BASE64_PREFIX.length))
+      : raw;
+
+    const session = JSON.parse(jsonStr) as {
       access_token?: string;
       expires_at?:   number;      // unix timestamp del expirado del access token
     };
