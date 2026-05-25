@@ -13,9 +13,11 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setDebugInfo('▶ handleSubmit ejecutado — conectando con Supabase…');
     console.log('[login] handleSubmit ejecutado | email:', email.trim());
     setLoading(true);
     setError(null);
@@ -29,6 +31,8 @@ function LoginForm() {
         password,
       });
 
+      const debugMsg = `Supabase → user:${data?.user?.id ? 'ok' : 'null'} session:${data?.session ? 'ok' : 'null'} error:${authError?.message ?? 'ninguno'}`;
+      setDebugInfo(debugMsg);
       console.log('[login] respuesta Supabase | user:', data?.user?.id ?? 'null', '| session:', data?.session ? 'ok' : 'null', '| error:', authError?.message ?? 'null', '| status:', authError?.status ?? '-');
 
       // ── Error de autenticación ───────────────────────────────────────────────
@@ -109,6 +113,13 @@ function LoginForm() {
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Iniciar sesión</h2>
           <p className="text-slate-400 text-sm mb-8">Ingresa tus credenciales para continuar.</p>
+
+          {/* Panel de diagnóstico temporal — remover tras resolver el bug */}
+          {debugInfo && (
+            <div className="mb-4 bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3">
+              <p className="text-xs font-mono text-yellow-800 break-all">🔍 {debugInfo}</p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
