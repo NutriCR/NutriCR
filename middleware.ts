@@ -49,10 +49,13 @@ interface SessionUser {
  *   - El JSON no puede parsearse
  */
 function getSessionUser(request: NextRequest): SessionUser | null {
-  // Recolectar todos los chunks de la cookie de auth y ordenarlos
+  // Recolectar todos los chunks de la cookie de auth y ordenarlos.
+  // La regex incluye ancla $ para evitar capturar cookies como
+  // sb-xxx-auth-token-code-verifier o sb-xxx-auth-token-provider-token,
+  // que si se concatenan al JSON hacen fallar el JSON.parse.
   const chunks = request.cookies
     .getAll()
-    .filter((c) => /^sb-.+-auth-token/.test(c.name))
+    .filter((c) => /^sb-.+-auth-token(\.\d+)?$/.test(c.name))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (chunks.length === 0) return null;
@@ -107,12 +110,15 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Tipo incorrecto → login (nutriólogo no puede entrar a /paciente y viceversa)
-    if (esNutriologo && user.tipo_usuario !== 'nutriologo') {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+    // Tipo incorrecto → redirigir al dashboard correcto.
+    // Solo bloqueamos si SABEMOS con certeza el tipo equivocado.
+    // Si tipo_usuario === undefined (edge case de JWT) dejamos pasar:
+    // el Route Handler hará la verificación real con la base de datos.
+    if (esNutriologo && user.tipo_usuario === 'paciente') {
+      return NextResponse.redirect(new URL('/paciente/inicio', request.url));
     }
-    if (esPaciente && user.tipo_usuario !== 'paciente') {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+    if (esPaciente && user.tipo_usuario === 'nutriologo') {
+      return NextResponse.redirect(new URL('/nutriologo/dashboard', request.url));
     }
   }
 
