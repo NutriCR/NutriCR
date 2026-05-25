@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-
-const TEST_NUTRIOLOGO_ID = '22222222-2222-2222-2222-222222222222';
+import { requireNutriologo } from '@/lib/supabase/auth-helpers';
 
 // ── GET /api/pacientes/[id] ────────────────────────────────────────────────────
-// Devuelve: paciente (con datos de usuario), plan activo y adherencia semanal.
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } },
 ) {
+  const auth = await requireNutriologo();
+  if (!auth.ok) return auth.response;
+
   const supabase = createAdminClient();
   const { id } = params;
 
-  // Paciente + usuario vinculado
   const { data: paciente, error: pErr } = await supabase
     .from('pacientes')
     .select('*, usuarios(nombre, apellido, email)')
@@ -24,7 +24,11 @@ export async function GET(
     return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 });
   }
 
-  // Plan activo
+  // Verificar que el paciente pertenece al nutriólogo autenticado
+  if (paciente.nutriologo_id !== auth.data.nutriologoId) {
+    return NextResponse.json({ error: 'Sin acceso a este paciente' }, { status: 403 });
+  }
+
   const { data: plan } = await supabase
     .from('planes_nutricionales')
     .select('*')
@@ -32,7 +36,6 @@ export async function GET(
     .eq('activo', true)
     .maybeSingle();
 
-  // Adherencia: recetas generadas en los últimos 7 días
   const hace7 = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const { count } = await supabase
     .from('recetas_generadas')
@@ -43,11 +46,7 @@ export async function GET(
   const adherencia = Math.min(100, Math.round(((count ?? 0) / 7) * 100));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const usuario = (paciente as any).usuarios as {
-    nombre: string;
-    apellido: string | null;
-    email: string;
-  } | null;
+  const usuario = (paciente as any).usuarios as { nombre: string; apellido: string | null; email: string } | null;
 
   return NextResponse.json({
     paciente: {
@@ -67,19 +66,20 @@ export async function GET(
 }
 
 // ── PATCH /api/pacientes/[id] ──────────────────────────────────────────────────
-// Actualiza: objetivo y/o condiciones_medicas del paciente.
 
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
+  const auth = await requireNutriologo();
+  if (!auth.ok) return auth.response;
+
   const supabase = createAdminClient();
   const body = await request.json() as {
     objetivo?: string | null;
     condiciones_medicas?: string[];
   };
 
-  // Seguridad: solo actualizar pacientes vinculados a este nutriólogo
   const { error } = await supabase
     .from('pacientes')
     .update({
@@ -88,7 +88,7 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     })
     .eq('id', params.id)
-    .eq('nutriologo_id', TEST_NUTRIOLOGO_ID); // guard
+    .eq('nutriologo_id', auth.data.nutriologoId); // guard
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

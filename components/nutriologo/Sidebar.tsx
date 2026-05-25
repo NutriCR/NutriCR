@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 interface SidebarProps {
   expanded:  boolean;
@@ -20,6 +21,14 @@ const navItems = [
 
 export default function Sidebar({ expanded, animated, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router   = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/login');
+    router.refresh();
+  }
 
   return (
     <aside
@@ -104,19 +113,41 @@ export default function Sidebar({ expanded, animated, onToggle }: SidebarProps) 
         })}
       </nav>
 
-      {/* ── Avatar del nutriólogo ── */}
+      {/* ── Avatar + logout ── */}
       <div className={cn(
-        'border-t border-slate-100 flex-shrink-0 flex items-center',
-        expanded ? 'p-4 gap-3' : 'p-3 justify-center',
+        'border-t border-slate-100 flex-shrink-0',
+        expanded ? 'p-4' : 'p-3',
       )}>
-        <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-sm flex-shrink-0">
-          👤
-        </div>
-        {expanded && (
-          <div className="min-w-0 overflow-hidden">
-            <p className="text-sm font-medium text-slate-700 truncate">Nutriólogo</p>
-            <p className="text-xs text-slate-400 truncate">Admin</p>
+        <div className={cn('flex items-center', expanded ? 'gap-3' : 'justify-center')}>
+          <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-sm flex-shrink-0">
+            👤
           </div>
+          {expanded && (
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700 truncate">Nutriólogo</p>
+            </div>
+          )}
+          {expanded && (
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
+              aria-label="Cerrar sesión"
+            >
+              <LogoutIcon />
+            </button>
+          )}
+        </div>
+        {/* Botón de logout visible también en modo colapsado */}
+        {!expanded && (
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="mt-2 w-full flex justify-center py-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            aria-label="Cerrar sesión"
+          >
+            <LogoutIcon />
+          </button>
         )}
       </div>
     </aside>
@@ -137,6 +168,15 @@ function ChevronRight() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+      <path d="M3 1h6a1 1 0 0 1 1 1v2H9V2H3v11h6v-2h1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" fill="currentColor" />
+      <path d="M10.5 5l2.5 2.5-2.5 2.5M13 7.5H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

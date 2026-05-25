@@ -276,11 +276,27 @@ export default function DashboardPage() {
       .includes(busqueda.toLowerCase()),
   );
 
+  // ── Guardar código en BD ───────────────────────────────────────────────────
+
+  async function guardarCodigo(nuevoCodigo: string) {
+    try {
+      await fetch('/api/codigos', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ codigo: nuevoCodigo }),
+      });
+    } catch {
+      // Fallo silencioso — el código sigue visible en el modal
+    }
+  }
+
   // ── Abrir modal con nuevo código ───────────────────────────────────────────
 
   function abrirModal() {
-    setCodigo(generarCodigo());
+    const nuevoCodigo = generarCodigo();
+    setCodigo(nuevoCodigo);
     setModal(true);
+    guardarCodigo(nuevoCodigo);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -570,7 +586,7 @@ export default function DashboardPage() {
       {modal && (
         <ModalCodigo
           codigo={codigo}
-          onNuevoCodigo={() => setCodigo(generarCodigo())}
+          onNuevoCodigo={() => { const c = generarCodigo(); setCodigo(c); guardarCodigo(c); }}
           onClose={() => setModal(false)}
         />
       )}

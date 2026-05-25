@@ -414,6 +414,41 @@ export interface Database {
         ];
       };
 
+      codigos_invitacion: {
+        Row: {
+          id:            string;
+          nutriologo_id: string;
+          codigo:        string;
+          usado:         boolean;
+          created_at:    string;
+          usado_at:      string | null;
+        };
+        Insert: {
+          id?:           string;
+          nutriologo_id: string;
+          codigo:        string;
+          usado?:        boolean;
+          created_at?:   string;
+          usado_at?:     string | null;
+        };
+        Update: {
+          id?:           string;
+          nutriologo_id?: string;
+          codigo?:       string;
+          usado?:        boolean;
+          usado_at?:     string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'codigos_invitacion_nutriologo_id_fkey';
+            columns: ['nutriologo_id'];
+            isOneToOne: false;
+            referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
       mediciones_inbody: {
         Row: {
           id: string;
