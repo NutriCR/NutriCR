@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import ServiceWorkerUpdater from '@/components/ServiceWorkerUpdater';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -36,7 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Reemplazo del deprecated apple-mobile-web-app-capable */}
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <ServiceWorkerUpdater />
+      </body>
     </html>
   );
 }
