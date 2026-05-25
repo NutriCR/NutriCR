@@ -54,8 +54,17 @@ export default function RegistroNutriologoPage() {
       });
 
       if (signUpError) throw new Error(signUpError.message);
-      if (!signUpData.user) throw new Error('No se recibió respuesta del servidor.');
 
+      // signUpData.user es null cuando Supabase tiene "Confirm email" ON
+      // y el email ya está registrado (anti-enumeración). En ese caso no
+      // hay user_id disponible → tratar como email duplicado.
+      if (!signUpData.user) {
+        throw new Error('User already registered');
+      }
+
+      // signUpData.session puede ser null si "Confirm email" está ON.
+      // En ese caso no hay cookies de sesión, así que pasamos el user_id
+      // en el body para que setup-profile lo verifique vía admin API.
       const res = await fetch('/api/auth/setup-profile', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,6 +73,7 @@ export default function RegistroNutriologoPage() {
           nombre:           form.nombre.trim(),
           apellido:         form.apellido.trim() || null,
           numero_colegiado: form.numeroColegiado.trim() || null,
+          user_id:          signUpData.user.id,   // para el Modo B (sin sesión)
         }),
       });
 

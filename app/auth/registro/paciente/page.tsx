@@ -77,7 +77,12 @@ export default function RegistroPacientePage() {
       });
 
       if (signUpError) throw new Error(signUpError.message);
-      if (!signUpData.user) throw new Error('No se recibió respuesta del servidor.');
+
+      if (!signUpData.user) {
+        // Supabase devuelve user: null cuando el email ya está registrado
+        // y "Confirm email" está activado (protección anti-enumeración).
+        throw new Error('User already registered');
+      }
 
       const res = await fetch('/api/auth/setup-profile', {
         method:  'POST',
@@ -87,6 +92,7 @@ export default function RegistroPacientePage() {
           nombre:            form.nombre.trim(),
           apellido:          form.apellido.trim() || null,
           codigo_nutriologo: form.codigoNutriologo.trim(),
+          user_id:           signUpData.user.id,   // para el Modo B (sin sesión)
         }),
       });
 
