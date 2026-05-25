@@ -16,18 +16,24 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log('[login] handleSubmit ejecutado | email:', email.trim());
     setLoading(true);
     setError(null);
 
     try {
       const supabase = createClient();
+      console.log('[login] llamando signInWithPassword…');
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password,
       });
 
+      console.log('[login] respuesta Supabase | user:', data?.user?.id ?? 'null', '| session:', data?.session ? 'ok' : 'null', '| error:', authError?.message ?? 'null', '| status:', authError?.status ?? '-');
+
       // ── Error de autenticación ───────────────────────────────────────────────
       if (authError) {
+        console.error('[login] authError completo:', authError);
         if (authError.message === 'Email not confirmed') {
           setError('Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
         } else if (authError.message === 'Invalid login credentials') {
@@ -39,32 +45,23 @@ function LoginForm() {
       }
 
       if (!data.user) {
+        console.error('[login] data.user es null sin error de Supabase');
         setError('No se pudo obtener la sesión. Intenta de nuevo.');
         return;
       }
 
       // ── Determinar destino ───────────────────────────────────────────────────
-      // Validar `next` para evitar open-redirect (solo paths relativos)
       const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
       const tipo     = data.user.user_metadata?.tipo_usuario as string | undefined;
       const destino  = safeNext ?? (tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard');
 
-      // ── Navegar con hard-navigation ──────────────────────────────────────────
-      // Usamos window.location.href en lugar de router.push() por dos razones:
-      // 1. Garantiza que el middleware del servidor recibe las cookies recién
-      //    seteadas por Supabase (evita carreras con el caché de RSC).
-      // 2. Si la navegación no ocurre (ej: el middleware rechaza),
-      //    la recarga completa resetea el estado de React y muestra el login limpio.
+      console.log('[login] navegando a:', destino, '| tipo_usuario:', tipo ?? 'undefined', '| safeNext:', safeNext ?? 'null');
       window.location.href = destino;
 
-      // No llamar setLoading(false) aquí: la página se descarga al navegar.
-      // Si por alguna razón no navega, el finally lo resetea.
-
     } catch (err) {
+      console.error('[login] excepción capturada:', err);
       setError(err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.');
     } finally {
-      // Siempre liberar el botón: tanto en error como si window.location.href
-      // no dispara la descarga inmediata (raro, pero defensivo).
       setLoading(false);
     }
   }
