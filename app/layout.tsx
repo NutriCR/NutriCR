@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'NutriCR',
   description: 'Plataforma de nutrición personalizada con IA',
   manifest: '/manifest.json',
+  // appleWebApp.capable genera <meta name="apple-mobile-web-app-capable">
+  // que Chrome marcó deprecated. Se mantiene por compatibilidad con iOS Safari
+  // pero se agrega mobile-web-app-capable manualmente en el <head>.
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -29,6 +32,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={inter.variable}>
+      <head>
+        {/* Reemplazo del deprecated apple-mobile-web-app-capable */}
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );
