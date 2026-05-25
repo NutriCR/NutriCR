@@ -9,28 +9,31 @@ export default function RegistroPacientePage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    nombre:             '',
-    apellido:           '',
-    email:              '',
-    password:           '',
-    confirmPass:        '',
-    codigoNutriologo:   '',
+    nombre:           '',
+    apellido:         '',
+    email:            '',
+    password:         '',
+    confirmPass:      '',
+    codigoNutriologo: '',
   });
-  const [loading,          setLoading]          = useState(false);
-  const [error,            setError]            = useState<string | null>(null);
-  const [codigoValidado,   setCodigoValidado]   = useState<boolean | null>(null);
-  const [validandoCodigo,  setValidandoCodigo]  = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+  const [codigoValidado,  setCodigoValidado]  = useState<boolean | null>(null);
+  const [validandoCodigo, setValidandoCodigo] = useState(false);
 
-  function handleChange(k: keyof typeof form, v: string) {
-    setForm((f) => ({ ...f, [k]: v }));
-    if (k === 'codigoNutriologo') setCodigoValidado(null); // reset validación
+  function set(k: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = k === 'codigoNutriologo' ? e.target.value.toUpperCase() : e.target.value;
+      setForm((f) => ({ ...f, [k]: v }));
+      if (k === 'codigoNutriologo') setCodigoValidado(null);
+    };
   }
 
   async function validarCodigo() {
     if (form.codigoNutriologo.trim().length < 9) return;
     setValidandoCodigo(true);
     try {
-      const res = await fetch(`/api/codigos?codigo=${encodeURIComponent(form.codigoNutriologo.trim())}`);
+      const res  = await fetch(`/api/codigos?codigo=${encodeURIComponent(form.codigoNutriologo.trim())}`);
       const json = await res.json();
       setCodigoValidado(json.valido === true);
     } catch {
@@ -61,7 +64,6 @@ export default function RegistroPacientePage() {
     try {
       const supabase = createClient();
 
-      // 1. Crear cuenta en Supabase Auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email:    form.email.trim(),
         password: form.password,
@@ -77,15 +79,14 @@ export default function RegistroPacientePage() {
       if (signUpError) throw new Error(signUpError.message);
       if (!signUpData.user) throw new Error('No se recibió respuesta del servidor.');
 
-      // 2. Crear registros en BD (usuarios + pacientes) y validar código
       const res = await fetch('/api/auth/setup-profile', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tipo_usuario:       'paciente',
-          nombre:             form.nombre.trim(),
-          apellido:           form.apellido.trim() || null,
-          codigo_nutriologo:  form.codigoNutriologo.trim(),
+          tipo_usuario:      'paciente',
+          nombre:            form.nombre.trim(),
+          apellido:          form.apellido.trim() || null,
+          codigo_nutriologo: form.codigoNutriologo.trim(),
         }),
       });
 
@@ -96,35 +97,20 @@ export default function RegistroPacientePage() {
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
-      if (msg.includes('already registered') || msg.includes('User already registered')) {
-        setError('Ya existe una cuenta con este correo. Inicia sesión.');
-      } else {
-        setError(msg);
-      }
+      setError(
+        msg.includes('already registered') || msg.includes('User already registered')
+          ? 'Ya existe una cuenta con este correo. Inicia sesión.'
+          : msg,
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  const field = (
-    label: string,
-    key: keyof typeof form,
-    opts: { type?: string; placeholder?: string; required?: boolean },
-  ) => (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-        {label} {opts.required !== false && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type={opts.type ?? 'text'}
-        value={form[key]}
-        onChange={(e) => handleChange(key, e.target.value)}
-        placeholder={opts.placeholder}
-        required={opts.required !== false}
-        className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
-      />
-    </div>
-  );
+  // ── Clases reutilizables ──────────────────────────────────────────────────────
+  const inputCls =
+    'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all';
+  const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
   return (
     <>
@@ -176,17 +162,87 @@ export default function RegistroPacientePage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {field('Nombre', 'nombre', { placeholder: 'María' })}
-              {field('Apellido', 'apellido', { placeholder: 'López', required: false })}
-            </div>
-            {field('Correo electrónico', 'email', { type: 'email', placeholder: 'maria@email.com' })}
-            {field('Contraseña', 'password', { type: 'password', placeholder: 'Mínimo 6 caracteres' })}
-            {field('Confirmar contraseña', 'confirmPass', { type: 'password', placeholder: '••••••••' })}
 
-            {/* Campo de código con validación */}
+            {/* Nombre + Apellido */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>
+                  Nombre <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.nombre}
+                  onChange={set('nombre')}
+                  placeholder="María"
+                  required
+                  autoComplete="given-name"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Apellido</label>
+                <input
+                  type="text"
+                  value={form.apellido}
+                  onChange={set('apellido')}
+                  placeholder="López"
+                  autoComplete="family-name"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            {/* Correo */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className={labelCls}>
+                Correo electrónico <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={set('email')}
+                placeholder="maria@email.com"
+                required
+                autoComplete="email"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Contraseña */}
+            <div>
+              <label className={labelCls}>
+                Contraseña <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                placeholder="Mínimo 6 caracteres"
+                required
+                autoComplete="new-password"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Confirmar contraseña */}
+            <div>
+              <label className={labelCls}>
+                Confirmar contraseña <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="password"
+                value={form.confirmPass}
+                onChange={set('confirmPass')}
+                placeholder="••••••••"
+                required
+                autoComplete="new-password"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Código de nutriólogo */}
+            <div>
+              <label className={labelCls}>
                 Código de tu nutriólogo <span className="text-red-400">*</span>
               </label>
               <div className="flex gap-2">
@@ -194,19 +250,16 @@ export default function RegistroPacientePage() {
                   <input
                     type="text"
                     value={form.codigoNutriologo}
-                    onChange={(e) => handleChange('codigoNutriologo', e.target.value.toUpperCase())}
+                    onChange={set('codigoNutriologo')}
                     onBlur={validarCodigo}
                     placeholder="XXXX-XXXX"
                     maxLength={9}
                     required
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all uppercase"
+                    autoComplete="off"
+                    className={`${inputCls} font-mono tracking-widest uppercase`}
                   />
-                  {codigoValidado === true && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
-                  )}
-                  {codigoValidado === false && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">✗</span>
-                  )}
+                  {codigoValidado === true  && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>}
+                  {codigoValidado === false && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">✗</span>}
                 </div>
                 <button
                   type="button"
@@ -220,12 +273,8 @@ export default function RegistroPacientePage() {
               <p className="text-xs text-slate-400 mt-1">
                 Tu nutriólogo te compartirá este código desde su panel.
               </p>
-              {codigoValidado === false && (
-                <p className="text-xs text-red-500 mt-1">Código inválido o ya utilizado.</p>
-              )}
-              {codigoValidado === true && (
-                <p className="text-xs text-green-600 mt-1">✓ Código válido.</p>
-              )}
+              {codigoValidado === false && <p className="text-xs text-red-500 mt-1">Código inválido o ya utilizado.</p>}
+              {codigoValidado === true  && <p className="text-xs text-green-600 mt-1">✓ Código válido.</p>}
             </div>
 
             <button

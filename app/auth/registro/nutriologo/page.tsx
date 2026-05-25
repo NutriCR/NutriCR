@@ -86,7 +86,7 @@ export default function RegistroNutriologoPage() {
 
   // ── Clases reutilizables ──────────────────────────────────────────────────────
   const inputCls =
-    'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all';
+    'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all';
   const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
   return (

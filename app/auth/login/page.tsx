@@ -106,7 +106,7 @@ function LoginForm() {
                 placeholder="tu@email.com"
                 required
                 autoComplete="email"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
               />
             </div>
 
@@ -121,7 +121,7 @@ function LoginForm() {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
               />
             </div>
 

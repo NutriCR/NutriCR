@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient as createSSRServerClient, type SetAllCookies } from '@supabase/ssr';
+import { createServerClient as createSSRServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from './database.types';
-import { getSupabaseUrl } from './url';
+import { getSupabaseUrl, getAnonKey, getServiceRoleKey } from './url';
 
 /**
  * Cliente autenticado con anon key + cookies de sesión.
@@ -13,13 +13,13 @@ export function createAuthClient() {
   const cookieStore = cookies();
   return createSSRServerClient<Database>(
     getSupabaseUrl(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getAnonKey(),
     {
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
@@ -40,7 +40,7 @@ export function createAuthClient() {
 export function createServerClient() {
   return createClient<Database>(
     getSupabaseUrl(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getAnonKey(),
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 }
@@ -52,7 +52,7 @@ export function createServerClient() {
 export function createAdminClient() {
   return createClient<Database>(
     getSupabaseUrl(),
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getServiceRoleKey(),
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 }
