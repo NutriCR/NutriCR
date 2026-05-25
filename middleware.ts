@@ -1,89 +1,133 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Middleware de Next.js — protección de rutas y refresco de sesión.
  *
- * Rutas protegidas:
- *   /nutriologo/*  → requiere sesión con tipo_usuario === 'nutriologo'
- *   /paciente/*    → requiere sesión con tipo_usuario === 'paciente'
+ * Usa CERO imports externos: solo APIs Web disponibles en Edge Runtime.
+ * Motivo: @supabase/ssr → @supabase/realtime-js → ws → net/tls (Node.js)
+ * provocaba MIDDLEWARE_INVOCATION_FAILED en Vercel.
  *
- * Si no hay sesión → redirige a /auth/login
- * Si el tipo no coincide → redirige a /auth/login
+ * Seguridad: el middleware solo decide redirecciones.
+ * La verificación real del token ocurre en requireNutriologo() /
+ * requirePaciente() dentro de cada Route Handler con createAdminClient().
  */
-export async function middleware(request: NextRequest) {
+
+// ─── JWT decode ───────────────────────────────────────────────────────────────
+
+/**
+ * Decodifica el payload de un JWT sin verificar la firma.
+ * Suficiente para routing: la firma se verifica en los Route Handlers.
+ */
+function decodeJWTPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    // base64url → base64 estándar → decodificar
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded  = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Session reader ───────────────────────────────────────────────────────────
+
+interface SessionUser {
+  tipo_usuario: string | undefined;
+}
+
+/**
+ * Lee la sesión de Supabase directamente desde las cookies del request.
+ *
+ * @supabase/ssr almacena la sesión como JSON en cookies con nombre
+ * sb-<project-ref>-auth-token (puede estar dividida en chunks: .0, .1, …)
+ *
+ * Retorna null si:
+ *   - No hay cookie de sesión
+ *   - El access_token está expirado (con 60 s de gracia para el refresh del cliente)
+ *   - El JSON no puede parsearse
+ */
+function getSessionUser(request: NextRequest): SessionUser | null {
+  // Recolectar todos los chunks de la cookie de auth y ordenarlos
+  const chunks = request.cookies
+    .getAll()
+    .filter((c) => /^sb-.+-auth-token/.test(c.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (chunks.length === 0) return null;
+
+  try {
+    const raw = chunks.map((c) => decodeURIComponent(c.value)).join('');
+    const session = JSON.parse(raw) as {
+      access_token?: string;
+      expires_at?:   number;      // unix timestamp del expirado del access token
+    };
+
+    if (!session?.access_token) return null;
+
+    // expires_at viene en el JSON de sesión; si no, lo sacamos del JWT
+    const payload    = decodeJWTPayload(session.access_token);
+    const expiresAt  = session.expires_at ?? (payload?.exp as number | undefined) ?? 0;
+
+    // Rechazar solo si expiró hace más de 60 s (margen para que el cliente refresque)
+    if (expiresAt < Math.floor(Date.now() / 1000) - 60) return null;
+
+    const userMeta = payload?.user_metadata as { tipo_usuario?: string } | undefined;
+
+    return { tipo_usuario: userMeta?.tipo_usuario };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const user = getSessionUser(request);
 
-  // ── Crear respuesta base (se renueva si necesitamos setear cookies) ──────────
-  let supabaseResponse = NextResponse.next({ request });
-
-  // ── Cliente Supabase para middleware ─────────────────────────────────────────
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          // Propagar las cookies al request y a la response
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  // ── IMPORTANTE: llamar getUser() para refrescar tokens expirados ─────────────
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // ── Rutas de auth — si ya hay sesión, redirigir al dashboard correcto ─────────
+  // ── Rutas de auth — redirigir si ya hay sesión activa ──────────────────────
   if (pathname.startsWith('/auth/') && user) {
-    const tipo = user.user_metadata?.tipo_usuario as string | undefined;
-    const dest = tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard';
+    const dest = user.tipo_usuario === 'paciente'
+      ? '/paciente/inicio'
+      : '/nutriologo/dashboard';
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
-  // ── Rutas protegidas ─────────────────────────────────────────────────────────
+  // ── Rutas protegidas ───────────────────────────────────────────────────────
   const esNutriologo = pathname.startsWith('/nutriologo');
   const esPaciente   = pathname.startsWith('/paciente');
 
   if (esNutriologo || esPaciente) {
-    // Sin sesión → login
+    // Sin sesión → login con ?next= para redirigir de vuelta
     if (!user) {
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    const tipo = user.user_metadata?.tipo_usuario as string | undefined;
-
-    // Tipo incorrecto → login (evitar que un nutriólogo acceda a /paciente y viceversa)
-    if (esNutriologo && tipo !== 'nutriologo') {
+    // Tipo incorrecto → login (nutriólogo no puede entrar a /paciente y viceversa)
+    if (esNutriologo && user.tipo_usuario !== 'nutriologo') {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
-    if (esPaciente && tipo !== 'paciente') {
+    if (esPaciente && user.tipo_usuario !== 'paciente') {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
   }
 
-  // ── Raíz "/" — redirigir según sesión ────────────────────────────────────────
+  // ── Raíz "/" — redirigir al dashboard correcto si hay sesión ───────────────
   if (pathname === '/') {
     if (user) {
-      const tipo = user.user_metadata?.tipo_usuario as string | undefined;
-      const dest = tipo === 'paciente' ? '/paciente/inicio' : '/nutriologo/dashboard';
+      const dest = user.tipo_usuario === 'paciente'
+        ? '/paciente/inicio'
+        : '/nutriologo/dashboard';
       return NextResponse.redirect(new URL(dest, request.url));
     }
-    // Sin sesión → dejar pasar (la root page muestra landing)
+    // Sin sesión → landing page pública
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
@@ -92,7 +136,7 @@ export const config = {
      * Ejecutar en todas las rutas EXCEPTO:
      *   - _next/static  (archivos estáticos)
      *   - _next/image   (optimización de imágenes)
-     *   - favicon.ico   (favicon)
+     *   - favicon.ico
      *   - icons/        (PWA icons)
      *   - manifest.json (PWA manifest)
      */
