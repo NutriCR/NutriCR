@@ -9,18 +9,19 @@ export default function RegistroNutriologoPage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    nombre:        '',
-    apellido:      '',
-    email:         '',
-    password:      '',
-    confirmPass:   '',
+    nombre:          '',
+    apellido:        '',
+    email:           '',
+    password:        '',
+    confirmPass:     '',
     numeroColegiado: '',
   });
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
-  function handleChange(k: keyof typeof form, v: string) {
-    setForm((f) => ({ ...f, [k]: v }));
+  function set(k: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,7 +41,6 @@ export default function RegistroNutriologoPage() {
     try {
       const supabase = createClient();
 
-      // 1. Crear cuenta en Supabase Auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email:    form.email.trim(),
         password: form.password,
@@ -56,7 +56,6 @@ export default function RegistroNutriologoPage() {
       if (signUpError) throw new Error(signUpError.message);
       if (!signUpData.user) throw new Error('No se recibió respuesta del servidor.');
 
-      // 2. Crear registros en la BD (usuarios + nutriologos)
       const res = await fetch('/api/auth/setup-profile', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,37 +74,20 @@ export default function RegistroNutriologoPage() {
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
-      // Traducir mensajes comunes de Supabase
-      if (msg.includes('already registered') || msg.includes('User already registered')) {
-        setError('Ya existe una cuenta con este correo. Inicia sesión.');
-      } else {
-        setError(msg);
-      }
+      setError(
+        msg.includes('already registered') || msg.includes('User already registered')
+          ? 'Ya existe una cuenta con este correo. Inicia sesión.'
+          : msg,
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  const field = (
-    label: string,
-    key: keyof typeof form,
-    opts: { type?: string; placeholder?: string; required?: boolean; hint?: string },
-  ) => (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-        {label} {opts.required !== false && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type={opts.type ?? 'text'}
-        value={form[key]}
-        onChange={(e) => handleChange(key, e.target.value)}
-        placeholder={opts.placeholder}
-        required={opts.required !== false}
-        className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all"
-      />
-      {opts.hint && <p className="text-xs text-slate-400 mt-1">{opts.hint}</p>}
-    </div>
-  );
+  // ── Clases reutilizables ──────────────────────────────────────────────────────
+  const inputCls =
+    'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition-all';
+  const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
   return (
     <>
@@ -155,22 +137,99 @@ export default function RegistroNutriologoPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Nombre + Apellido */}
             <div className="grid grid-cols-2 gap-3">
-              {field('Nombre', 'nombre', { placeholder: 'Ana' })}
-              {field('Apellido', 'apellido', { placeholder: 'González', required: false })}
+              <div>
+                <label className={labelCls}>
+                  Nombre <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.nombre}
+                  onChange={set('nombre')}
+                  placeholder="Ana"
+                  required
+                  autoComplete="given-name"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Apellido</label>
+                <input
+                  type="text"
+                  value={form.apellido}
+                  onChange={set('apellido')}
+                  placeholder="González"
+                  autoComplete="family-name"
+                  className={inputCls}
+                />
+              </div>
             </div>
-            {field('Correo electrónico', 'email', { type: 'email', placeholder: 'ana@nutricr.cr' })}
-            {field('N° Colegiado CCPNCR', 'numeroColegiado', {
-              placeholder: 'Ej: CN-12345',
-              required: false,
-              hint: 'Número de colegiado del Colegio de Nutricionistas de Costa Rica.',
-            })}
-            {field('Contraseña', 'password', {
-              type: 'password',
-              placeholder: 'Mínimo 6 caracteres',
-              hint: '',
-            })}
-            {field('Confirmar contraseña', 'confirmPass', { type: 'password', placeholder: '••••••••' })}
+
+            {/* Correo */}
+            <div>
+              <label className={labelCls}>
+                Correo electrónico <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={set('email')}
+                placeholder="ana@nutricr.cr"
+                required
+                autoComplete="email"
+                className={inputCls}
+              />
+            </div>
+
+            {/* N° Colegiado */}
+            <div>
+              <label className={labelCls}>N° Colegiado CCPNCR</label>
+              <input
+                type="text"
+                value={form.numeroColegiado}
+                onChange={set('numeroColegiado')}
+                placeholder="Ej: CN-12345"
+                autoComplete="off"
+                className={inputCls}
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Número de colegiado del Colegio de Nutricionistas de Costa Rica.
+              </p>
+            </div>
+
+            {/* Contraseña */}
+            <div>
+              <label className={labelCls}>
+                Contraseña <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                placeholder="Mínimo 6 caracteres"
+                required
+                autoComplete="new-password"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Confirmar contraseña */}
+            <div>
+              <label className={labelCls}>
+                Confirmar contraseña <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="password"
+                value={form.confirmPass}
+                onChange={set('confirmPass')}
+                placeholder="••••••••"
+                required
+                autoComplete="new-password"
+                className={inputCls}
+              />
+            </div>
 
             <button
               type="submit"
