@@ -2,38 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireNutriologo } from '@/lib/supabase/auth-helpers';
 
-// ── POST /api/codigos ──────────────────────────────────────────────────────────
-// Guarda un código de invitación generado por el nutriólogo autenticado.
-
-export async function POST(request: Request) {
-  const auth = await requireNutriologo();
-  if (!auth.ok) return auth.response;
-
-  const { codigo } = await request.json() as { codigo: string };
-
-  if (!codigo || codigo.length !== 9) {
-    return NextResponse.json({ error: 'Formato de código inválido' }, { status: 400 });
-  }
-
-  const { error } = await createAdminClient()
-    .from('codigos_invitacion')
-    .insert({
-      nutriologo_id: auth.data.nutriologoId,
-      codigo,
-    });
-
-  if (error) {
-    // Código duplicado (ya existe) → devolver ok igualmente
-    if (error.code === '23505') return NextResponse.json({ ok: true });
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true }, { status: 201 });
-}
-
-// ── GET /api/codigos?codigo=XXXX-XXXX ─────────────────────────────────────────
-// Valida si un código existe y no ha sido usado. Sin auth requerida (para el
-// formulario de registro del paciente antes de crear la cuenta).
+// ─── GET /api/codigos?codigo=XXXX-XXXX ────────────────────────────────────────
+// Valida si un código existe en nutriologos.codigo_invitacion.
+// Sin autenticación — se llama desde el formulario de registro del paciente.
 
 export async function GET(request: Request) {
   const codigo = new URL(request.url).searchParams.get('codigo');
@@ -43,17 +14,59 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await createAdminClient()
-    .from('codigos_invitacion')
-    .select('usado')
-    .eq('codigo', codigo.toUpperCase())
-    .single();
+    .from('nutriologos')
+    .select('id')
+    .eq('codigo_invitacion', codigo.toUpperCase())
+    .maybeSingle();
 
-  if (error || !data) {
-    return NextResponse.json({ valido: false, error: 'Código no encontrado' });
+  if (error) {
+    return NextResponse.json({ valido: false, error: 'Error al validar código' });
   }
-  if (data.usado) {
-    return NextResponse.json({ valido: false, error: 'Código ya utilizado' });
+
+  if (!data) {
+    return NextResponse.json({
+      valido: false,
+      error: 'Código inválido, verificá con tu nutriólogo',
+    });
   }
 
   return NextResponse.json({ valido: true });
+}
+
+// ─── POST /api/codigos ────────────────────────────────────────────────────────
+// Guarda (o reemplaza) el código de invitación del nutriólogo autenticado
+// en la columna nutriologos.codigo_invitacion.
+// Body: { codigo: "XXXX-XXXX" }
+
+export async function POST(request: Request) {
+  const auth = await requireNutriologo();
+  if (!auth.ok) return auth.response;
+
+  const body = await request.json() as { codigo?: string };
+  const codigo = body.codigo?.toUpperCase().trim();
+
+  if (!codigo || !/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(codigo)) {
+    return NextResponse.json(
+      { error: 'Formato de código inválido. Esperado: XXXX-XXXX' },
+      { status: 400 },
+    );
+  }
+
+  const { error } = await createAdminClient()
+    .from('nutriologos')
+    .update({ codigo_invitacion: codigo })
+    .eq('id', auth.data.nutriologoId);
+
+  if (error) {
+    // 23505 = unique constraint — código ya en uso por otro nutriólogo
+    if (error.code === '23505') {
+      return NextResponse.json(
+        { error: 'Código ya registrado. Generá uno nuevo.' },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, codigo });
 }

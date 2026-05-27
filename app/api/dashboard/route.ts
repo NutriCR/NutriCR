@@ -26,7 +26,16 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    // 2. Pacientes del nutriólogo
+    // 2. Código de invitación del nutriólogo
+    const { data: nutrData } = await supabase
+      .from('nutriologos')
+      .select('codigo_invitacion')
+      .eq('id', nutriologoId)
+      .single();
+
+    const codigoInvitacion = nutrData?.codigo_invitacion ?? null;
+
+    // 3. Pacientes del nutriólogo
     const { data: pacientesRaw, error: pacErr } = await supabase
       .from('pacientes')
       .select('id, usuario_id, objetivo')
@@ -34,17 +43,14 @@ export async function GET() {
 
     if (pacErr) throw new Error(pacErr.message);
 
-    // Sin pacientes → devolver mock
+    // Sin pacientes → devolver lista vacía (no mock)
     if (!pacientesRaw || pacientesRaw.length === 0) {
       return NextResponse.json({
-        stats: {
-          totalPacientes:     MOCK_PACIENTES.length,
-          adherenciaPromedio: Math.round(MOCK_PACIENTES.reduce((s, p) => s + p.adherencia, 0) / MOCK_PACIENTES.length),
-          ingresosMes:        250_000,
-        },
-        pacientes:  MOCK_PACIENTES,
-        isMockData: true,
+        stats: { totalPacientes: 0, adherenciaPromedio: 0, ingresosMes: 0 },
+        pacientes:        [],
+        isMockData:       false,
         nutriologoId,
+        codigoInvitacion,
       });
     }
 
@@ -116,8 +122,9 @@ export async function GET() {
         ingresosMes,
       },
       pacientes,
-      isMockData:  false,
-      nutriologoId,   // ← el dashboard lo usa para guardar códigos de invitación
+      isMockData:       false,
+      nutriologoId,
+      codigoInvitacion,
     });
 
   } catch (err) {

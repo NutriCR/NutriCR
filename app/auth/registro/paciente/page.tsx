@@ -279,7 +279,7 @@ export default function RegistroPacientePage() {
               <p className="text-xs text-slate-400 mt-1">
                 Tu nutriólogo te compartirá este código desde su panel.
               </p>
-              {codigoValidado === false && <p className="text-xs text-red-500 mt-1">Código inválido o ya utilizado.</p>}
+              {codigoValidado === false && <p className="text-xs text-red-500 mt-1">Código inválido, verificá con tu nutriólogo.</p>}
               {codigoValidado === true  && <p className="text-xs text-green-600 mt-1">✓ Código válido.</p>}
             </div>
 

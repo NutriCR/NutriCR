@@ -67,6 +67,7 @@ export interface Database {
           especialidad: string | null;
           descripcion: string | null;
           foto_url: string | null;
+          codigo_invitacion: string | null;
           created_at: string;
         };
         Insert: {
@@ -76,6 +77,7 @@ export interface Database {
           especialidad?: string | null;
           descripcion?: string | null;
           foto_url?: string | null;
+          codigo_invitacion?: string | null;
           created_at?: string;
         };
         Update: {
@@ -85,6 +87,7 @@ export interface Database {
           especialidad?: string | null;
           descripcion?: string | null;
           foto_url?: string | null;
+          codigo_invitacion?: string | null;
         };
         Relationships: [
           {

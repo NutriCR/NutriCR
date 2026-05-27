@@ -23,9 +23,10 @@ interface Stats {
 }
 
 interface DashboardData {
-  stats:      Stats;
-  pacientes:  PacienteRow[];
-  isMockData: boolean;
+  stats:            Stats;
+  pacientes:        PacienteRow[];
+  isMockData:       boolean;
+  codigoInvitacion: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,19 +157,22 @@ function SkeletonRow() {
 
 function ModalCodigo({
   codigo,
+  guardando,
   onNuevoCodigo,
   onClose,
 }: {
   codigo:        string;
+  guardando:     boolean;
   onNuevoCodigo: () => void;
   onClose:       () => void;
 }) {
   const [copiado, setCopiado] = useState(false);
 
   async function handleCopiar() {
-    await navigator.clipboard.writeText(codigo.replace('-', ''));
+    // Copiar sin el guión para que sea más fácil de escribir
+    await navigator.clipboard.writeText(codigo);
     setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
+    setTimeout(() => setCopiado(false), 2500);
   }
 
   return (
@@ -180,8 +184,8 @@ function ModalCodigo({
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">Agregar paciente</h3>
-            <p className="text-sm text-slate-400 mt-0.5">Código de invitación único</p>
+            <h3 className="text-lg font-bold text-slate-800">Código de invitación</h3>
+            <p className="text-sm text-slate-400 mt-0.5">Compartilo con tus pacientes para vincularlos</p>
           </div>
           <button
             onClick={onClose}
@@ -194,22 +198,30 @@ function ModalCodigo({
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
           {/* Código */}
-          <div className="bg-slate-50 rounded-xl p-5 text-center border border-slate-100">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-3">
-              Código de invitación
+          <div className="bg-brand-50 rounded-xl p-5 text-center border border-brand-100 relative">
+            {guardando && (
+              <span className="absolute top-2 right-3 text-xs text-brand-400 animate-pulse">
+                guardando…
+              </span>
+            )}
+            <p className="text-xs font-medium text-brand-500 uppercase tracking-widest mb-3">
+              Tu código único
             </p>
-            <p className="text-4xl font-mono font-bold text-slate-800 tracking-[0.25em]">
+            <p className="text-4xl font-mono font-bold text-brand-700 tracking-[0.3em] select-all">
               {codigo}
+            </p>
+            <p className="text-xs text-brand-400 mt-2">
+              Este código es permanente y puede usarlo cualquier paciente tuyo
             </p>
           </div>
 
           {/* Instrucciones */}
-          <div className="bg-brand-50 rounded-xl p-4 space-y-2">
-            <p className="text-xs font-semibold text-brand-700">¿Cómo funciona?</p>
-            <ol className="space-y-1.5 text-xs text-brand-600">
-              <li className="flex gap-2"><span className="font-bold">1.</span> Copia este código y compártelo con tu paciente</li>
-              <li className="flex gap-2"><span className="font-bold">2.</span> El paciente descarga NutriCR e ingresa el código</li>
-              <li className="flex gap-2"><span className="font-bold">3.</span> Queda vinculado a tu panel automáticamente</li>
+          <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-semibold text-slate-600">¿Cómo funciona?</p>
+            <ol className="space-y-1.5 text-xs text-slate-500">
+              <li className="flex gap-2"><span className="font-bold text-brand-600">1.</span> Copiá el código y mandáselo a tu paciente</li>
+              <li className="flex gap-2"><span className="font-bold text-brand-600">2.</span> El paciente se registra en NutriCR e ingresa el código</li>
+              <li className="flex gap-2"><span className="font-bold text-brand-600">3.</span> Queda vinculado a tu panel automáticamente</li>
             </ol>
           </div>
 
@@ -228,11 +240,16 @@ function ModalCodigo({
             </button>
             <button
               onClick={onNuevoCodigo}
-              className="px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              disabled={guardando}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              title="Genera un código nuevo — el anterior dejará de funcionar"
             >
-              🔄 Nuevo
+              🔄 Renovar
             </button>
           </div>
+          <p className="text-xs text-slate-400 text-center">
+            Al renovar el código, el anterior deja de funcionar
+          </p>
         </div>
       </div>
     </div>
@@ -248,6 +265,7 @@ export default function DashboardPage() {
   const [busqueda, setBusqueda] = useState('');
   const [modal, setModal]       = useState(false);
   const [codigo, setCodigo]     = useState('');
+  const [guardandoCodigo, setGuardandoCodigo] = useState(false);
 
   // ── Carga de datos ──────────────────────────────────────────────────────────
 
@@ -258,7 +276,10 @@ export default function DashboardPage() {
       const res  = await fetch('/api/dashboard');
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Error al cargar dashboard');
-      setData(json as DashboardData);
+      const dashData = json as DashboardData;
+      setData(dashData);
+      // Precargar código guardado en estado local
+      if (dashData.codigoInvitacion) setCodigo(dashData.codigoInvitacion);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -276,27 +297,48 @@ export default function DashboardPage() {
       .includes(busqueda.toLowerCase()),
   );
 
-  // ── Guardar código en BD ───────────────────────────────────────────────────
+  // ── Guardar código en BD (UPDATE en nutriologos.codigo_invitacion) ─────────
 
   async function guardarCodigo(nuevoCodigo: string) {
+    setGuardandoCodigo(true);
     try {
-      await fetch('/api/codigos', {
+      const res = await fetch('/api/codigos', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ codigo: nuevoCodigo }),
       });
-    } catch {
-      // Fallo silencioso — el código sigue visible en el modal
+      if (!res.ok) {
+        const json = await res.json();
+        console.error('[dashboard] Error al guardar código:', json.error);
+      }
+    } catch (err) {
+      console.error('[dashboard] Error al guardar código:', err);
+    } finally {
+      setGuardandoCodigo(false);
     }
   }
 
-  // ── Abrir modal con nuevo código ───────────────────────────────────────────
+  // ── Abrir modal — mostrar código existente o generar uno nuevo ─────────────
 
   function abrirModal() {
-    const nuevoCodigo = generarCodigo();
-    setCodigo(nuevoCodigo);
-    setModal(true);
-    guardarCodigo(nuevoCodigo);
+    if (codigo) {
+      // Ya hay un código guardado → mostrar directamente
+      setModal(true);
+    } else {
+      // Primera vez → generar y guardar
+      const nuevo = generarCodigo();
+      setCodigo(nuevo);
+      setModal(true);
+      guardarCodigo(nuevo);
+    }
+  }
+
+  // ── Generar nuevo código (desde el modal) ──────────────────────────────────
+
+  function renovarCodigo() {
+    const nuevo = generarCodigo();
+    setCodigo(nuevo);
+    guardarCodigo(nuevo);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -426,15 +468,23 @@ export default function DashboardPage() {
             {[1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
           </div>
         ) : pacientesFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <span className="text-4xl">{busqueda ? '🔍' : '👥'}</span>
-            <p className="font-medium text-slate-600">
-              {busqueda ? `Sin resultados para "${busqueda}"` : 'Sin pacientes aún'}
+          <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
+            <span className="text-4xl">{busqueda ? '🔍' : '🔗'}</span>
+            <p className="font-medium text-slate-700">
+              {busqueda ? `Sin resultados para "${busqueda}"` : 'Aún no tenés pacientes vinculados'}
             </p>
             {!busqueda && (
-              <button onClick={abrirModal} className="text-sm text-brand-600 hover:underline">
-                Agregar primer paciente →
-              </button>
+              <>
+                <p className="text-sm text-slate-400 max-w-xs">
+                  Compartí tu código de invitación con tus pacientes para que se registren y queden vinculados a tu panel.
+                </p>
+                <button
+                  onClick={abrirModal}
+                  className="mt-1 flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+                >
+                  <span>🔑</span> Ver mi código de invitación
+                </button>
+              </>
             )}
           </div>
         ) : (
@@ -586,7 +636,8 @@ export default function DashboardPage() {
       {modal && (
         <ModalCodigo
           codigo={codigo}
-          onNuevoCodigo={() => { const c = generarCodigo(); setCodigo(c); guardarCodigo(c); }}
+          guardando={guardandoCodigo}
+          onNuevoCodigo={renovarCodigo}
           onClose={() => setModal(false)}
         />
       )}

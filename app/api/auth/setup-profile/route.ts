@@ -143,26 +143,27 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Código de nutriólogo requerido' }, { status: 400 });
       }
 
-      console.log(`${TAG} buscando código=${body.codigo_nutriologo}`);
-      const { data: codigoRow, error: codigoError } = await admin
-        .from('codigos_invitacion')
-        .select('id, nutriologo_id, usado')
-        .eq('codigo', body.codigo_nutriologo)
-        .single();
+      const codigoNormalizado = body.codigo_nutriologo.toUpperCase().trim();
+      console.log(`${TAG} buscando nutriólogo con codigo_invitacion=${codigoNormalizado}`);
 
-      if (codigoError || !codigoRow) {
+      const { data: nutriologoRow, error: codigoError } = await admin
+        .from('nutriologos')
+        .select('id')
+        .eq('codigo_invitacion', codigoNormalizado)
+        .maybeSingle();
+
+      if (codigoError || !nutriologoRow) {
         console.error(`${TAG} código no encontrado | supabaseErr:`, codigoError?.message ?? 'null');
-        return NextResponse.json({ error: 'Código de invitación no encontrado' }, { status: 400 });
-      }
-      if (codigoRow.usado) {
-        console.error(`${TAG} código ya utilizado | id=${codigoRow.id}`);
-        return NextResponse.json({ error: 'Código de invitación ya utilizado' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Código inválido, verificá con tu nutriólogo' },
+          { status: 400 },
+        );
       }
 
-      console.log(`${TAG} insert pacientes | usuario_id=${userId} | nutriologo_id=${codigoRow.nutriologo_id}`);
+      console.log(`${TAG} insert pacientes | usuario_id=${userId} | nutriologo_id=${nutriologoRow.id}`);
       const { error: pacError } = await admin
         .from('pacientes')
-        .insert({ usuario_id: userId, nutriologo_id: codigoRow.nutriologo_id });
+        .insert({ usuario_id: userId, nutriologo_id: nutriologoRow.id });
 
       if (pacError) {
         if (pacError.code === '23505') {
@@ -174,12 +175,6 @@ export async function POST(request: Request) {
       } else {
         console.log(`${TAG} insert pacientes OK`);
       }
-
-      console.log(`${TAG} marcando código como usado | id=${codigoRow.id}`);
-      await admin
-        .from('codigos_invitacion')
-        .update({ usado: true, usado_at: new Date().toISOString() })
-        .eq('id', codigoRow.id);
     }
 
     console.log(`${TAG} ✓ perfil creado correctamente | userId=${userId} | tipo=${body.tipo_usuario}`);
