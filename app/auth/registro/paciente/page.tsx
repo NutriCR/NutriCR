@@ -29,17 +29,30 @@ export default function RegistroPacientePage() {
     };
   }
 
+  // ── Validación en tiempo real (onBlur / botón Verificar) ─────────────────────
   async function validarCodigo() {
-    if (form.codigoNutriologo.trim().length < 9) return;
+    const codigo = form.codigoNutriologo.trim();
+    if (codigo.length < 9) return;
     setValidandoCodigo(true);
     try {
-      const res  = await fetch(`/api/codigos?codigo=${encodeURIComponent(form.codigoNutriologo.trim())}`);
-      const json = await res.json();
+      const res  = await fetch(`/api/codigos?codigo=${encodeURIComponent(codigo)}`);
+      const json = await res.json() as { valido: boolean; error?: string };
       setCodigoValidado(json.valido === true);
     } catch {
       setCodigoValidado(false);
     } finally {
       setValidandoCodigo(false);
+    }
+  }
+
+  // ── Validación directa que devuelve el resultado (no depende del estado) ─────
+  async function checkCodigo(codigo: string): Promise<{ valido: boolean; error?: string }> {
+    try {
+      const res  = await fetch(`/api/codigos?codigo=${encodeURIComponent(codigo)}`);
+      const json = await res.json() as { valido: boolean; error?: string };
+      return json;
+    } catch {
+      return { valido: false, error: 'Error de conexión al validar el código.' };
     }
   }
 
@@ -62,6 +75,17 @@ export default function RegistroPacientePage() {
 
     setLoading(true);
     try {
+      // ── Paso 1: validar el código ANTES de crear la cuenta ──────────────────
+      // Si el código es inválido, no tiene sentido crear el usuario en Auth.
+      const validacion = await checkCodigo(form.codigoNutriologo.trim());
+      setCodigoValidado(validacion.valido);
+
+      if (!validacion.valido) {
+        setError(validacion.error ?? 'Código inválido, verificá con tu nutriólogo.');
+        return;
+      }
+
+      // ── Paso 2: crear cuenta en Supabase Auth ───────────────────────────────
       const supabase = createClient();
 
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({

@@ -158,13 +158,15 @@ function SkeletonRow() {
 function ModalCodigo({
   codigo,
   guardando,
+  errorGuardado,
   onNuevoCodigo,
   onClose,
 }: {
-  codigo:        string;
-  guardando:     boolean;
-  onNuevoCodigo: () => void;
-  onClose:       () => void;
+  codigo:         string;
+  guardando:      boolean;
+  errorGuardado:  string | null;
+  onNuevoCodigo:  () => void;
+  onClose:        () => void;
 }) {
   const [copiado, setCopiado] = useState(false);
 
@@ -225,13 +227,33 @@ function ModalCodigo({
             </ol>
           </div>
 
+          {/* Error de guardado — aparece si falta la migración SQL */}
+          {errorGuardado && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
+              <span className="text-red-500 flex-shrink-0">⚠️</span>
+              <div>
+                <p className="text-xs font-semibold text-red-700 mb-0.5">El código no se guardó en la base de datos</p>
+                <p className="text-xs text-red-600">{errorGuardado}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  Ejecutá este SQL en Supabase → SQL Editor:
+                </p>
+                <code className="block mt-1 text-xs font-mono bg-red-100 text-red-800 rounded p-2 select-all">
+                  ALTER TABLE nutriologos ADD COLUMN IF NOT EXISTS codigo_invitacion TEXT;
+                </code>
+              </div>
+            </div>
+          )}
+
           {/* Acciones */}
           <div className="flex gap-3">
             <button
               onClick={handleCopiar}
+              disabled={!!errorGuardado}
               className={cn(
                 'flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all',
-                copiado
+                errorGuardado
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : copiado
                   ? 'bg-green-500 text-white'
                   : 'bg-brand-600 hover:bg-brand-700 text-white',
               )}
@@ -247,9 +269,11 @@ function ModalCodigo({
               🔄 Renovar
             </button>
           </div>
-          <p className="text-xs text-slate-400 text-center">
-            Al renovar el código, el anterior deja de funcionar
-          </p>
+          {!errorGuardado && (
+            <p className="text-xs text-slate-400 text-center">
+              Al renovar el código, el anterior deja de funcionar
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -266,6 +290,7 @@ export default function DashboardPage() {
   const [modal, setModal]       = useState(false);
   const [codigo, setCodigo]     = useState('');
   const [guardandoCodigo, setGuardandoCodigo] = useState(false);
+  const [errorCodigo,     setErrorCodigo]     = useState<string | null>(null);
 
   // ── Carga de datos ──────────────────────────────────────────────────────────
 
@@ -301,18 +326,20 @@ export default function DashboardPage() {
 
   async function guardarCodigo(nuevoCodigo: string) {
     setGuardandoCodigo(true);
+    setErrorCodigo(null);
     try {
-      const res = await fetch('/api/codigos', {
+      const res  = await fetch('/api/codigos', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ codigo: nuevoCodigo }),
       });
+      const json = await res.json();
       if (!res.ok) {
-        const json = await res.json();
-        console.error('[dashboard] Error al guardar código:', json.error);
+        // Error visible en el modal — el más común es que falte la migración SQL
+        setErrorCodigo(json.error ?? 'No se pudo guardar el código. Verificá la BD.');
       }
-    } catch (err) {
-      console.error('[dashboard] Error al guardar código:', err);
+    } catch {
+      setErrorCodigo('Error de conexión al guardar el código.');
     } finally {
       setGuardandoCodigo(false);
     }
@@ -637,6 +664,7 @@ export default function DashboardPage() {
         <ModalCodigo
           codigo={codigo}
           guardando={guardandoCodigo}
+          errorGuardado={errorCodigo}
           onNuevoCodigo={renovarCodigo}
           onClose={() => setModal(false)}
         />
