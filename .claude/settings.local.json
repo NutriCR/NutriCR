@@ -28,7 +28,13 @@
       "Bash(xargs ls -la)",
       "Bash(curl -s -I \"https://nutricr-app.vercel.app/auth/login\")",
       "Bash(curl -s -I \"https://nutricr-app.vercel.app/\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(sed -n '717,730p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
+      "Bash(sed -n '820,830p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
+      "Bash(sed -n '880,890p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
+      "Bash(sed -n '983,990p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)"
     ]
   }
 }
