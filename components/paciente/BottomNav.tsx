@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/paciente/inicio',   label: 'Inicio',   icon: '🏠' },
   { href: '/paciente/recetas',  label: 'Recetas',  icon: '🍽️' },
-  { href: '/paciente/escanear', label: 'Escanear', icon: '📷', fab: true },
+  { href: '/paciente/diario',   label: 'Diario',   icon: '📸', fab: true },
   { href: '/paciente/despensa', label: 'Despensa', icon: '🥫' },
   { href: '/paciente/perfil',   label: 'Perfil',   icon: '👤' },
 ];

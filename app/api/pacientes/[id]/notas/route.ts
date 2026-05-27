@@ -36,7 +36,9 @@ export async function POST(
     return NextResponse.json({ error: 'mensaje no puede estar vacío' }, { status: 400 });
   }
 
-  const { data, error } = await createAdminClient()
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
     .from('notas')
     .insert({
       paciente_id:   params.id,
@@ -49,5 +51,19 @@ export async function POST(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Crear notificación para el paciente (fallo silencioso — no bloquea la respuesta)
+  await admin
+    .from('notificaciones')
+    .insert({
+      paciente_id: params.id,
+      tipo:        'nota',
+      mensaje:     body.mensaje.trim(),
+      leida:       false,
+    })
+    .then(({ error: notifErr }) => {
+      if (notifErr) console.error('[notas] Error al crear notificación:', notifErr.message);
+    });
+
   return NextResponse.json({ data }, { status: 201 });
 }

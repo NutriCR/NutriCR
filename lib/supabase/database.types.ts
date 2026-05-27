@@ -493,6 +493,71 @@ export interface Database {
         ];
       };
 
+      diario_comidas: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          foto_url: string;
+          descripcion: string | null;
+          revisada: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          foto_url: string;
+          descripcion?: string | null;
+          revisada?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          revisada?: boolean;
+          descripcion?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'diario_comidas_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      notificaciones: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          tipo: string;
+          mensaje: string;
+          leida: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          tipo?: string;
+          mensaje: string;
+          leida?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          leida?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'notificaciones_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
       notas: {
         Row: {
           id: string;

@@ -83,6 +83,14 @@ interface Nota {
   leida: boolean;
 }
 
+interface FotoDiario {
+  id: string;
+  foto_url: string;
+  descripcion: string | null;
+  revisada: boolean;
+  created_at: string;
+}
+
 // ─── Mock data (cuando el paciente no existe en la BD) ────────────────────────
 
 const MOCK_PACIENTE: PacienteDetalle = {
@@ -370,6 +378,13 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   const [savingPlan, setSavingPlan] = useState(false);
   const [planDirty,  setPlanDirty]  = useState(false);
 
+  // Diario de comidas
+  const [fotoDiario,        setFotoDiario]        = useState<FotoDiario[]>([]);
+  const [cargandoDiario,    setCargandoDiario]    = useState(true);
+  const [sinRevisar,        setSinRevisar]        = useState(0);
+  const [fotoAmpliadaDiario, setFotoAmpliadaDiario] = useState<FotoDiario | null>(null);
+  const [marcandoRevisadas,  setMarcandoRevisadas]  = useState(false);
+
   // Notas
   const [nuevaNota,     setNuevaNota]     = useState('');
   const [sendingNota,   setSendingNota]   = useState(false);
@@ -394,10 +409,11 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [resP, resM, resN] = await Promise.all([
+      const [resP, resM, resN, resD] = await Promise.all([
         fetch(`/api/pacientes/${pacienteId}`),
         fetch(`/api/pacientes/${pacienteId}/mediciones`),
         fetch(`/api/pacientes/${pacienteId}/notas`),
+        fetch(`/api/pacientes/${pacienteId}/diario`),
       ]);
 
       if (!resP.ok) {
@@ -417,6 +433,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         setMediciones(MOCK_MEDICIONES);
         setNotas(MOCK_NOTAS);
         setAdherencia(72);
+        setCargandoDiario(false);
         return;
       }
 
@@ -445,6 +462,12 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         const { data } = await resN.json();
         setNotas(data ?? []);
       }
+      if (resD.ok) {
+        const { data, sinRevisar: sr } = await resD.json();
+        setFotoDiario(data ?? []);
+        setSinRevisar(sr ?? 0);
+      }
+      setCargandoDiario(false);
     } finally {
       setLoading(false);
     }
@@ -601,6 +624,22 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       showToast('Error al guardar medición', 'err');
     } finally {
       setSavingMedicion(false);
+    }
+  }
+
+  async function handleMarcarRevisadas() {
+    if (sinRevisar === 0) return;
+    setMarcandoRevisadas(true);
+    try {
+      const res = await fetch(`/api/pacientes/${pacienteId}/diario`, { method: 'PATCH' });
+      if (!res.ok) throw new Error();
+      setFotoDiario((prev) => prev.map((f) => ({ ...f, revisada: true })));
+      setSinRevisar(0);
+      showToast('Fotos marcadas como revisadas');
+    } catch {
+      showToast('Error al marcar las fotos', 'err');
+    } finally {
+      setMarcandoRevisadas(false);
     }
   }
 
@@ -980,7 +1019,78 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       </SectionCard>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          5. NOTAS DEL NUTRIÓLOGO
+          5. REGISTRO DE COMIDAS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Registro de comidas"
+        icon="📸"
+        action={
+          sinRevisar > 0 ? (
+            <button
+              onClick={handleMarcarRevisadas}
+              disabled={marcandoRevisadas}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {marcandoRevisadas ? 'Marcando…' : `Marcar ${sinRevisar} como revisada${sinRevisar > 1 ? 's' : ''}`}
+            </button>
+          ) : fotoDiario.length > 0 ? (
+            <span className="text-xs text-green-600 font-medium">✓ Todo revisado</span>
+          ) : undefined
+        }
+      >
+        {cargandoDiario ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} className="aspect-square rounded-xl bg-slate-100 animate-pulse" />
+            ))}
+          </div>
+        ) : fotoDiario.length === 0 ? (
+          <div className="text-center py-10 text-slate-400">
+            <span className="text-3xl block mb-2">🍽️</span>
+            <p className="text-sm">El paciente aún no ha subido fotos de comidas</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {fotoDiario.map((foto) => (
+              <button
+                key={foto.id}
+                onClick={() => setFotoAmpliadaDiario(foto)}
+                className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 group"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={foto.foto_url}
+                  alt={foto.descripcion ?? 'Foto de comida'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                />
+                {/* Overlay date */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                  <p className="text-white text-[9px] leading-tight">
+                    {new Date(foto.created_at).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                {/* Badge nueva */}
+                {!foto.revisada && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Badge resumen */}
+        {!cargandoDiario && fotoDiario.length > 0 && (
+          <p className="text-xs text-slate-400 mt-3 text-right">
+            {fotoDiario.length} foto{fotoDiario.length > 1 ? 's' : ''} en total
+            {sinRevisar > 0 && (
+              <span className="ml-2 text-red-500 font-semibold">· {sinRevisar} sin revisar</span>
+            )}
+          </p>
+        )}
+      </SectionCard>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          6. NOTAS DEL NUTRIÓLOGO
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard title="Notas para el paciente" icon="📝">
         {/* Nueva nota */}
@@ -1047,6 +1157,43 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
           </div>
         )}
       </SectionCard>
+
+      {/* ── Modal foto ampliada ── */}
+      {fotoAmpliadaDiario && (
+        <div
+          className="fixed inset-0 bg-black/85 z-50 flex flex-col items-center justify-center p-4"
+          onClick={() => setFotoAmpliadaDiario(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center text-lg hover:bg-white/30"
+            onClick={() => setFotoAmpliadaDiario(null)}
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={fotoAmpliadaDiario.foto_url}
+            alt={fotoAmpliadaDiario.descripcion ?? 'Foto de comida'}
+            className="max-w-full max-h-[70vh] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="mt-3 text-center" onClick={(e) => e.stopPropagation()}>
+            {fotoAmpliadaDiario.descripcion && (
+              <p className="text-white font-medium text-sm mb-1">{fotoAmpliadaDiario.descripcion}</p>
+            )}
+            <p className="text-white/60 text-xs">
+              {new Date(fotoAmpliadaDiario.created_at).toLocaleDateString('es-CR', {
+                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+              })}
+            </p>
+            {!fotoAmpliadaDiario.revisada && (
+              <span className="inline-block mt-2 bg-red-500/80 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                No revisada
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Modal medición ── */}
       {modalMedicion && (
