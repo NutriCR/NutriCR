@@ -61,13 +61,18 @@ export async function GET(
   const plan = planRes.data;
 
   // Escaneos de tiquete: query separada hasta que se aplique la migración de paciente_id
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const escaneosRaw = await (supabase as any)
-    .from('inventario')
-    .select('id')
-    .eq('paciente_id', id)
-    .gte('created_at', hace7)
-    .catch(() => ({ data: null }));
+  // ALTER TABLE inventario ADD COLUMN IF NOT EXISTS paciente_id uuid REFERENCES pacientes(id);
+  let escaneosRaw: { data: { id: string }[] | null } = { data: null };
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    escaneosRaw = await (supabase as any)
+      .from('inventario')
+      .select('id')
+      .eq('paciente_id', id)
+      .gte('created_at', hace7);
+  } catch {
+    // La columna paciente_id aún no existe — ejecutar migración SQL pendiente
+  }
 
   // Días únicos con foto en los últimos 7 días
   const fotosUnicos = new Set(

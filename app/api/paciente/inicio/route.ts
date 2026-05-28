@@ -111,13 +111,17 @@ export async function GET() {
 
   // Escaneos de tiquete: query separada hasta que se aplique la migración de paciente_id
   // ALTER TABLE inventario ADD COLUMN IF NOT EXISTS paciente_id uuid REFERENCES pacientes(id);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const escaneosRaw = await (admin as any)
-    .from('inventario')
-    .select('id', { count: 'exact', head: true })
-    .eq('paciente_id', pacienteId)
-    .gte('created_at', hace7)
-    .catch(() => ({ count: 0 }));
+  let escaneosRaw: { count: number | null } = { count: 0 };
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    escaneosRaw = await (admin as any)
+      .from('inventario')
+      .select('id', { count: 'exact', head: true })
+      .eq('paciente_id', pacienteId)
+      .gte('created_at', hace7);
+  } catch {
+    // La columna paciente_id aún no existe — ejecutar migración SQL pendiente
+  }
 
   // Extraer solo las fechas ISO del diario (el cliente agrupa por día local)
   const diarioFechas = (diarioRes.data ?? []).map((r) => r.created_at as string);

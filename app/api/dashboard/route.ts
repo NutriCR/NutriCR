@@ -92,15 +92,20 @@ export async function GET() {
         .gte('fecha_pago', inicioMes.toISOString()),
     ]);
 
-    // Escaneos de tiquete: query separada con supresión de tipo hasta que se aplique la migración
+    // Escaneos de tiquete: query separada hasta que se aplique la migración
     // ALTER TABLE inventario ADD COLUMN IF NOT EXISTS paciente_id uuid REFERENCES pacientes(id);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const escaneosRaw = await (supabase as any)
-      .from('inventario')
-      .select('paciente_id, created_at')
-      .in('paciente_id', pacienteIds)
-      .gte('created_at', sevenDaysAgo)
-      .catch(() => ({ data: null }));
+    let escaneosRaw: { data: { paciente_id: string; created_at: string }[] | null } = { data: null };
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      escaneosRaw = await (supabase as any)
+        .from('inventario')
+        .select('paciente_id, created_at')
+        .in('paciente_id', pacienteIds)
+        .gte('created_at', sevenDaysAgo);
+    } catch {
+      // La columna paciente_id aún no existe — ejecutar migración SQL pendiente
+    }
 
     // 6. Pre-procesar fotos → días únicos por paciente + última foto
     // Map: pacienteId → Set<dateKey>
