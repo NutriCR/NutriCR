@@ -34,7 +34,8 @@
       "Bash(sed -n '880,890p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
       "Bash(sed -n '983,990p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
       "Bash(npx tsc *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(git -C /Users/macdejose/NutriCR add lib/supabase/auth-helpers.ts components/paciente/BottomNav.tsx)"
     ]
   }
 }
