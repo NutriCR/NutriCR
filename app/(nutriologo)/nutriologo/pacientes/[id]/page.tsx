@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   ResponsiveContainer,
@@ -342,6 +342,134 @@ function CustomTooltip({
   );
 }
 
+// ─── Carrusel de fotos del diario ────────────────────────────────────────────
+
+function CarruselDiario({
+  fotos,
+  indiceInicial,
+  onClose,
+}: {
+  fotos: FotoDiario[];
+  indiceInicial: number;
+  onClose: () => void;
+}) {
+  const [idx, setIdx]   = useState(indiceInicial);
+  const touchStartX     = useRef(0);
+  const total           = fotos.length;
+  const foto            = fotos[idx];
+
+  const goPrev = () => setIdx((i) => (i - 1 + total) % total);
+  const goNext = () => setIdx((i) => (i + 1) % total);
+
+  // Teclado: ← → Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft')  setIdx((i) => (i - 1 + total) % total);
+      if (e.key === 'ArrowRight') setIdx((i) => (i + 1) % total);
+      if (e.key === 'Escape')     onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [total, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black z-50 flex flex-col select-none"
+      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev(); }
+      }}
+    >
+      {/* Keyframe fade */}
+      <style>{`@keyframes cf { from { opacity:0; transform:scale(0.96) } to { opacity:1; transform:scale(1) } }`}</style>
+
+      {/* ── Header: contador + cerrar ── */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
+        <span className="text-white/70 text-sm font-semibold">
+          {idx + 1}
+          <span className="text-white/35 mx-1">/</span>
+          {total}
+        </span>
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center text-base transition-colors"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* ── Foto principal con flechas ── */}
+      <div className="flex-1 flex items-center justify-center relative overflow-hidden px-14">
+        {/* ← Anterior */}
+        {total > 1 && (
+          <button
+            onClick={goPrev}
+            className="absolute left-2 z-10 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white text-2xl leading-none flex items-center justify-center transition-colors"
+            aria-label="Foto anterior"
+          >
+            ‹
+          </button>
+        )}
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={foto.id}
+          src={foto.foto_url}
+          alt={foto.descripcion ?? 'Foto de comida'}
+          className="max-w-full max-h-full object-contain rounded-lg"
+          style={{ animation: 'cf 0.18s ease' }}
+          draggable={false}
+        />
+
+        {/* Siguiente → */}
+        {total > 1 && (
+          <button
+            onClick={goNext}
+            className="absolute right-2 z-10 w-11 h-11 rounded-full bg-black/40 hover:bg-black/70 text-white text-2xl leading-none flex items-center justify-center transition-colors"
+            aria-label="Foto siguiente"
+          >
+            ›
+          </button>
+        )}
+      </div>
+
+      {/* ── Footer: fecha + descripción + dots ── */}
+      <div className="px-6 pb-8 pt-4 flex-shrink-0 text-center">
+        {foto.descripcion && (
+          <p className="text-white font-medium text-sm mb-1 leading-snug">{foto.descripcion}</p>
+        )}
+        <p className="text-white/50 text-xs">
+          {new Date(foto.created_at).toLocaleDateString('es-CR', {
+            weekday: 'long', day: 'numeric', month: 'long',
+            hour: '2-digit', minute: '2-digit',
+          })}
+        </p>
+
+        {/* Dot strip (máximo 20 fotos) */}
+        {total > 1 && total <= 20 && (
+          <div className="flex justify-center gap-1.5 mt-4">
+            {fotos.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                aria-label={`Ir a foto ${i + 1}`}
+                className={cn(
+                  'rounded-full transition-all duration-200',
+                  i === idx
+                    ? 'w-5 h-1.5 bg-white'
+                    : 'w-1.5 h-1.5 bg-white/35 hover:bg-white/60',
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PacienteDetallePage({ params }: { params: { id: string } }) {
@@ -379,11 +507,11 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   const [planDirty,  setPlanDirty]  = useState(false);
 
   // Diario de comidas
-  const [fotoDiario,        setFotoDiario]        = useState<FotoDiario[]>([]);
-  const [cargandoDiario,    setCargandoDiario]    = useState(true);
-  const [sinRevisar,        setSinRevisar]        = useState(0);
-  const [fotoAmpliadaDiario, setFotoAmpliadaDiario] = useState<FotoDiario | null>(null);
-  const [marcandoRevisadas,  setMarcandoRevisadas]  = useState(false);
+  const [fotoDiario,       setFotoDiario]      = useState<FotoDiario[]>([]);
+  const [cargandoDiario,   setCargandoDiario]  = useState(true);
+  const [sinRevisar,       setSinRevisar]      = useState(0);
+  const [carruselIdx,      setCarruselIdx]     = useState<number | null>(null); // null = cerrado
+  const [marcandoRevisadas, setMarcandoRevisadas] = useState(false);
 
   // Notas
   const [nuevaNota,     setNuevaNota]     = useState('');
@@ -640,6 +768,19 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       showToast('Error al marcar las fotos', 'err');
     } finally {
       setMarcandoRevisadas(false);
+    }
+  }
+
+  /** Abre el carrusel en el índice dado y marca todas como revisadas en el servidor. */
+  function openCarrusel(idx: number) {
+    setCarruselIdx(idx);
+    if (sinRevisar > 0 && !isMock) {
+      // Actualización optimista inmediata
+      setFotoDiario((prev) => prev.map((f) => ({ ...f, revisada: true })));
+      setSinRevisar(0);
+      // PATCH silencioso en el fondo
+      fetch(`/api/pacientes/${pacienteId}/diario`, { method: 'PATCH' })
+        .catch((err) => console.error('[carrusel] mark revisadas error:', err));
     }
   }
 
@@ -1051,10 +1192,10 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {fotoDiario.map((foto) => (
+            {fotoDiario.map((foto, i) => (
               <button
                 key={foto.id}
-                onClick={() => setFotoAmpliadaDiario(foto)}
+                onClick={() => openCarrusel(i)}
                 className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 group"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1063,15 +1204,15 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
                   alt={foto.descripcion ?? 'Foto de comida'}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
-                {/* Overlay date */}
+                {/* Badge de fecha */}
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
                   <p className="text-white text-[9px] leading-tight">
                     {new Date(foto.created_at).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
                   </p>
                 </div>
-                {/* Badge nueva */}
+                {/* Punto verde = no revisada */}
                 {!foto.revisada && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white shadow" />
                 )}
               </button>
             ))}
@@ -1158,41 +1299,13 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         )}
       </SectionCard>
 
-      {/* ── Modal foto ampliada ── */}
-      {fotoAmpliadaDiario && (
-        <div
-          className="fixed inset-0 bg-black/85 z-50 flex flex-col items-center justify-center p-4"
-          onClick={() => setFotoAmpliadaDiario(null)}
-        >
-          <button
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center text-lg hover:bg-white/30"
-            onClick={() => setFotoAmpliadaDiario(null)}
-          >
-            ✕
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fotoAmpliadaDiario.foto_url}
-            alt={fotoAmpliadaDiario.descripcion ?? 'Foto de comida'}
-            className="max-w-full max-h-[70vh] object-contain rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="mt-3 text-center" onClick={(e) => e.stopPropagation()}>
-            {fotoAmpliadaDiario.descripcion && (
-              <p className="text-white font-medium text-sm mb-1">{fotoAmpliadaDiario.descripcion}</p>
-            )}
-            <p className="text-white/60 text-xs">
-              {new Date(fotoAmpliadaDiario.created_at).toLocaleDateString('es-CR', {
-                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-              })}
-            </p>
-            {!fotoAmpliadaDiario.revisada && (
-              <span className="inline-block mt-2 bg-red-500/80 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                No revisada
-              </span>
-            )}
-          </div>
-        </div>
+      {/* ── Carrusel de fotos del diario ── */}
+      {carruselIdx !== null && fotoDiario.length > 0 && (
+        <CarruselDiario
+          fotos={fotoDiario}
+          indiceInicial={carruselIdx}
+          onClose={() => setCarruselIdx(null)}
+        />
       )}
 
       {/* ── Modal medición ── */}
