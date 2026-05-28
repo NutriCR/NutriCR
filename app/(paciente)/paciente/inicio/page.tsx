@@ -57,11 +57,23 @@ interface InicioData {
 }
 
 type Metrica = 'peso' | 'grasa' | 'musculo';
-type ChartPoint = { label: string; real: number | null; proyeccion: number | null };
+type ChartPoint = {
+  label:      string;
+  real:       number | null;
+  proyeccion: number | null;
+  esMeta?:    true;   // marca el último punto de proyección para el label
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TDEE_ASUMIDO = 2000; // kcal/día asumido si el paciente no tiene plan
+
+// Proyección conservadora por defecto (sin plan nutricional asignado)
+const FALLBACK_SEMANAL: Record<Metrica, number> = {
+  peso:    -0.5,   // ½ kg/semana de pérdida moderada
+  grasa:   -0.15,  // ~0.15 pp de grasa/semana
+  musculo:  0,     // sin datos de plan, se asume mantenimiento
+};
 
 const METRICA: Record<Metrica, { label: string; unit: string; color: string }> = {
   peso:    { label: 'Peso',    unit: 'kg', color: '#16a34a' },
@@ -104,7 +116,7 @@ function buildChartData(
   metrica: Metrica,
   plan: Plan | null,
 ): ChartPoint[] {
-  // Take last 8 measurements that have a value for this metric
+  // Tomar las últimas 8 mediciones que tengan valor para esta métrica
   const withValue = mediciones
     .filter((m) => getMetricValue(m, metrica) != null)
     .slice(-8);
@@ -119,39 +131,50 @@ function buildChartData(
 
     points.push({
       label,
-      real:      val,
-      // Pivot point appears in BOTH series so the lines connect visually
-      proyeccion: isPivot && plan ? val : null,
+      real: val,
+      // BUG FIX: el pivot SIEMPRE tiene proyeccion = val (conecta las dos líneas)
+      // antes estaba `isPivot && plan ? val : null` → sin plan, la proyección no arrancaba
+      proyeccion: isPivot ? val : null,
     });
   });
 
   const lastMedicion = withValue[withValue.length - 1];
   const lastVal      = lastMedicion ? getMetricValue(lastMedicion, metrica) : null;
 
-  // Add 4-week projection only when we have a real starting point and a plan
-  if (lastVal !== null && plan?.calorias_diarias) {
-    const calDiff       = plan.calorias_diarias - TDEE_ASUMIDO;
-    const weeklyKgChange = (calDiff * 7) / 7700; // ~7700 kcal ≈ 1 kg de tejido
+  // BUG FIX: antes era `if (lastVal !== null && plan?.calorias_diarias)` →
+  // sin plan nunca se agregaban las semanas de proyección.
+  // Ahora: si hay plan con calorías definidas, calcular con el plan;
+  // si no, usar proyección conservadora por defecto.
+  if (lastVal !== null) {
+    let weeklyChange: number;
 
-    for (let w = 1; w <= 4; w++) {
-      let projected: number;
+    if (plan?.calorias_diarias) {
+      // Proyección basada en plan nutricional real
+      const calDiff    = plan.calorias_diarias - TDEE_ASUMIDO;
+      const weeklyKg   = (calDiff * 7) / 7700; // ~7700 kcal ≈ 1 kg de tejido
 
       if (metrica === 'peso') {
-        projected = lastVal + weeklyKgChange * w;
+        weeklyChange = weeklyKg;
       } else if (metrica === 'grasa') {
-        // En déficit, se pierde sobre todo grasa; en superávit, la % baja ligeramente
-        const weeklyFatChange = calDiff < 0 ? weeklyKgChange * 0.4 : weeklyKgChange * 0.12;
-        projected = lastVal + weeklyFatChange * w;
+        // Déficit → pierde principalmente grasa; superávit → baja ligeramente la %
+        weeklyChange = calDiff < 0 ? weeklyKg * 0.4 : weeklyKg * 0.12;
       } else {
-        // Músculo: crece con superávit, casi sin cambio en déficit
-        const weeklyMuscleGain = calDiff > 0 ? weeklyKgChange * 0.25 : 0;
-        projected = lastVal + weeklyMuscleGain * w;
+        // Músculo crece con superávit; en déficit se mantiene
+        weeklyChange = calDiff > 0 ? weeklyKg * 0.25 : 0;
       }
+    } else {
+      // Sin plan asignado → proyección conservadora por defecto
+      weeklyChange = FALLBACK_SEMANAL[metrica];
+    }
 
+    for (let w = 1; w <= 4; w++) {
+      const projected = parseFloat((lastVal + weeklyChange * w).toFixed(1));
       points.push({
         label:      `+${w} sem`,
         real:       null,
-        proyeccion: parseFloat(projected.toFixed(1)),
+        proyeccion: projected,
+        // BUG FIX: marcar el último punto para renderizar la etiqueta "Meta"
+        ...(w === 4 ? { esMeta: true } : {}),
       });
     }
   }
@@ -236,6 +259,39 @@ export default function InicioPage() {
       setMarcando(false);
     }
   }
+
+  // ── Dot final de proyección con etiqueta "Meta en 4 semanas" ───────────────
+  // Se usa como prop `dot` de la línea punteada. Para la mayoría de puntos
+  // devuelve <g/> vacío; solo el punto `esMeta` renderiza marcador + label.
+  const projectionDot = useCallback(
+    (props: any) => {
+      const { cx, cy, payload } = props;
+      if (!payload?.esMeta || cx == null || cy == null) return <g />;
+
+      const val   = payload.proyeccion as number;
+      const label = `Meta ${val.toFixed(1)} ${unit}`;
+
+      return (
+        <g>
+          {/* Círculo marcador del punto meta */}
+          <circle cx={cx} cy={cy} r={5} fill={color} stroke="white" strokeWidth={2} />
+          {/* Etiqueta anclada a la derecha del punto para no salirse */}
+          <text
+            x={cx - 8}
+            y={cy - 10}
+            textAnchor="end"
+            fill={color}
+            fontSize={9}
+            fontWeight="700"
+            fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          >
+            {label}
+          </text>
+        </g>
+      );
+    },
+    [color, unit],
+  );
 
   // ── Custom tooltip (memoized per unit to avoid recharts flicker) ────────────
   const CustomTooltip = useCallback(
@@ -324,8 +380,8 @@ export default function InicioPage() {
           </div>
         ) : (
           <>
-            <ResponsiveContainer width="100%" height={170}>
-              <ComposedChart data={chartData} margin={{ top: 12, right: 6, left: -18, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={180}>
+              <ComposedChart data={chartData} margin={{ top: 24, right: 10, left: -18, bottom: 0 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="#f1f5f9"
@@ -367,32 +423,27 @@ export default function InicioPage() {
                   stroke={color}
                   strokeWidth={2}
                   strokeDasharray="6 3"
-                  strokeOpacity={0.55}
-                  dot={false}
-                  activeDot={{ r: 4, fill: color, strokeDasharray: '0' }}
+                  strokeOpacity={0.6}
+                  dot={projectionDot}
+                  activeDot={{ r: 4, fill: color }}
                   connectNulls={false}
                   isAnimationActive={false}
                 />
               </ComposedChart>
             </ResponsiveContainer>
 
-            {/* Leyenda de proyección y meta */}
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block w-5 border-t-2 border-dashed"
-                  style={{ borderColor: color, opacity: 0.6 }}
-                />
-                <span>Proyección 4 semanas</span>
-              </div>
-              {metaFinal !== null && (
-                <span className="font-semibold text-slate-600">
-                  Meta:&nbsp;
-                  <span style={{ color }}>
-                    {metaFinal.toFixed(1)}&thinsp;{unit}
-                  </span>
-                </span>
-              )}
+            {/* Leyenda inferior */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <span
+                className="inline-block w-6 border-t-2 border-dashed flex-shrink-0"
+                style={{ borderColor: color, opacity: 0.65 }}
+              />
+              <span>
+                Proyección{' '}
+                {data?.plan?.calorias_diarias
+                  ? 'basada en tu plan nutricional'
+                  : 'conservadora (sin plan asignado)'}
+              </span>
             </div>
           </>
         )}
