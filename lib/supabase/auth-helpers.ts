@@ -99,19 +99,60 @@ export async function requireNutriologo(): Promise<AuthResult<NutriologoSession>
 /**
  * Verifica que haya una sesión activa de tipo paciente.
  * Retorna el pacienteId y el nutriologoId asignado.
+ *
+ * Si el usuario está autenticado con tipo_usuario='paciente' en JWT pero no tiene
+ * fila en `pacientes` (e.g. setup-profile falló o cuenta creada manualmente),
+ * se auto-provisiona la fila con nutriologo_id = null.
  */
 export async function requirePaciente(): Promise<AuthResult<PacienteSession>> {
   try {
     const { data: { user } } = await createAuthClient().auth.getUser();
     if (!user) return { ok: false, response: unauthorized() };
 
-    const { data } = await createAdminClient()
+    const admin = createAdminClient();
+
+    // maybeSingle() devuelve null sin error cuando no hay fila (evita logs de error en Supabase)
+    let { data } = await admin
       .from('pacientes')
       .select('id, nutriologo_id')
       .eq('usuario_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!data) return { ok: false, response: forbidden('Paciente no encontrado') };
+    // Si no hay fila pero el JWT declara tipo_usuario = 'paciente', auto-provisionar
+    if (!data) {
+      const tipoMeta = user.user_metadata?.tipo_usuario as string | undefined;
+      if (tipoMeta !== 'paciente') {
+        return { ok: false, response: forbidden('Paciente no encontrado') };
+      }
+
+      console.warn('[requirePaciente] Fila faltante — auto-provisionando paciente para userId:', user.id);
+
+      // Asegurar fila en usuarios
+      await admin.from('usuarios').upsert(
+        {
+          id:           user.id,
+          email:        user.email ?? '',
+          nombre:       (user.user_metadata?.nombre as string | undefined) ?? 'Paciente',
+          apellido:     (user.user_metadata?.apellido as string | undefined) ?? null,
+          tipo_usuario: 'paciente',
+        },
+        { onConflict: 'id' },
+      );
+
+      // Crear fila en pacientes (nutriologo_id queda null — se puede vincular después)
+      const { data: created, error: insertErr } = await admin
+        .from('pacientes')
+        .insert({ usuario_id: user.id })
+        .select('id, nutriologo_id')
+        .single();
+
+      if (insertErr || !created) {
+        console.error('[requirePaciente] insert pacientes falló:', insertErr?.message);
+        return { ok: false, response: forbidden('No se pudo crear el perfil de paciente') };
+      }
+
+      data = created;
+    }
 
     return {
       ok: true,
