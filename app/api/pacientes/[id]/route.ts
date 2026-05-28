@@ -56,6 +56,7 @@ export async function GET(
       email:               usuario?.email               ?? '',
       objetivo:            paciente.objetivo,
       condiciones_medicas: paciente.condiciones_medicas ?? [],
+      alergias:            paciente.alergias            ?? [],   // ← nuevo
       peso:                paciente.peso,
       altura:              paciente.altura,
       fecha_nacimiento:    paciente.fecha_nacimiento,
@@ -78,6 +79,7 @@ export async function PATCH(
   const body = await request.json() as {
     objetivo?: string | null;
     condiciones_medicas?: string[];
+    alergias?: string[];            // ← nuevo
   };
 
   const { error } = await supabase
@@ -85,6 +87,7 @@ export async function PATCH(
     .update({
       ...(body.objetivo !== undefined            && { objetivo:            body.objetivo }),
       ...(body.condiciones_medicas !== undefined && { condiciones_medicas: body.condiciones_medicas }),
+      ...(body.alergias            !== undefined && { alergias:            body.alergias }),  // ← nuevo
       updated_at: new Date().toISOString(),
     })
     .eq('id', params.id)

@@ -48,12 +48,13 @@ interface Notificacion {
 type TipoComida = 'desayuno' | 'almuerzo' | 'cena' | 'merienda';
 
 interface InicioData {
-  mediciones: Medicion[];
-  plan: Plan | null;
+  mediciones:     Medicion[];
+  plan:           Plan | null;
   recetaSugerida: Receta | null;
-  notificacionReciente: Notificacion | null;
-  tipoComida: TipoComida;
-  paciente: { nombre: string; apellido: string | null };
+  notificaciones: Notificacion[];     // ← array (máx 2 no leídas)
+  diarioFechas:   string[];           // ← ISO timestamps del diario (30 días)
+  tipoComida:     TipoComida;
+  paciente:       { nombre: string; apellido: string | null };
 }
 
 type Metrica = 'peso' | 'grasa' | 'musculo';
@@ -103,6 +104,60 @@ function formatFechaHoy(): string {
     day: 'numeric',
     month: 'long',
   });
+}
+
+/** YYYY-MM-DD en zona local del navegador. */
+function toDateKey(d: Date): string {
+  return d.toLocaleDateString('en-CA'); // 'en-CA' → YYYY-MM-DD
+}
+
+/** Lunes de la semana actual (hora local). */
+function getMondayOfWeek(today: Date): Date {
+  const d = new Date(today);
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0=Dom … 6=Sáb
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+/** Los 7 días de la semana actual (Lun–Dom). */
+function getWeekDays(today: Date): Date[] {
+  const monday = getMondayOfWeek(today);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+/** Días consecutivos de registro terminando en hoy. */
+function calcStreak(diarioFechasSet: Set<string>, today: Date): number {
+  const base = new Date(today);
+  base.setHours(0, 0, 0, 0);
+  let streak = 0;
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() - i);
+    if (diarioFechasSet.has(toDateKey(d))) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/** Fecha relativa compacta para notas (ej. "Hoy", "Ayer", "23 may"). */
+function formatNotifFecha(iso: string): string {
+  const d     = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const ayer  = new Date(today); ayer.setDate(today.getDate() - 1);
+  const dKey  = toDateKey(d);
+  if (dKey === toDateKey(today)) return 'Hoy';
+  if (dKey === toDateKey(ayer))  return 'Ayer';
+  return d.toLocaleDateString('es-CR', { day: 'numeric', month: 'short' });
 }
 
 function getMetricValue(m: Medicion, met: Metrica): number | null {
@@ -215,11 +270,12 @@ function PulsingDot(props: any) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InicioPage() {
-  const [data,         setData]         = useState<InicioData | null>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [metrica,      setMetrica]      = useState<Metrica>('peso');
-  const [notifLeida,   setNotifLeida]   = useState(false);
-  const [marcando,     setMarcando]     = useState(false);
+  const [data,        setData]       = useState<InicioData | null>(null);
+  const [loading,     setLoading]    = useState(true);
+  const [metrica,     setMetrica]    = useState<Metrica>('peso');
+  // notificaciones: IDs que el usuario ya marcó como leídas en esta sesión
+  const [notifOcultas,  setNotifOcultas]  = useState<Set<string>>(new Set());
+  const [marcandoId,    setMarcandoId]    = useState<string | null>(null);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -245,18 +301,40 @@ export default function InicioPage() {
   const hasChart = chartData.length > 0;
   const { unit, color } = METRICA[metrica];
 
-  // ── Marcar notificación como leída ──────────────────────────────────────────
+  // ── Adherencia semanal ──────────────────────────────────────────────────────
+  const today          = useMemo(() => new Date(), []);
+  const todayKey       = useMemo(() => toDateKey(today), [today]);
+  const weekDays       = useMemo(() => getWeekDays(today), [today]);
+  const diarioFechasSet = useMemo(() => {
+    const set = new Set<string>();
+    (data?.diarioFechas ?? []).forEach((iso) =>
+      set.add(toDateKey(new Date(iso))),
+    );
+    return set;
+  }, [data?.diarioFechas]);
+  const streak = useMemo(
+    () => calcStreak(diarioFechasSet, today),
+    [diarioFechasSet, today],
+  );
+
+  // ── Notificaciones visibles (filtramos las ya marcadas en esta sesión) ──────
+  const notifVisibles = useMemo(
+    () => (data?.notificaciones ?? []).filter((n) => !notifOcultas.has(n.id)),
+    [data?.notificaciones, notifOcultas],
+  );
+
+  // ── Marcar una notificación como leída ──────────────────────────────────────
   async function marcarLeida(id: string) {
-    setMarcando(true);
+    setMarcandoId(id);
     try {
       await fetch('/api/notificaciones', {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ id }),
       });
-      setNotifLeida(true);
+      setNotifOcultas((prev) => new Set(Array.from(prev).concat(id)));
     } finally {
-      setMarcando(false);
+      setMarcandoId(null);
     }
   }
 
@@ -491,37 +569,134 @@ export default function InicioPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          NOTA DEL NUTRIÓLOGO (solo si hay notificación no leída)
+          ADHERENCIA SEMANAL
       ══════════════════════════════════════════════════════════════════════ */}
-      {!loading && data?.notificacionReciente && !notifLeida && (
-        <Card className="p-4 border-l-[3px] border-l-brand-500 bg-brand-50/40">
-          <div className="flex items-start gap-3">
-            <span className="text-xl flex-shrink-0 mt-0.5">🔔</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-brand-700 mb-1.5 uppercase tracking-wide">
-                Mensaje de tu nutriólogo
-              </p>
-              <p className="text-sm text-slate-700 leading-relaxed">
-                {data.notificacionReciente.mensaje}
-              </p>
-              <button
-                onClick={() => marcarLeida(data.notificacionReciente!.id)}
-                disabled={marcando}
-                className="mt-3 flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors disabled:opacity-50"
-              >
-                {marcando ? (
-                  <>
-                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                    Marcando…
-                  </>
-                ) : (
-                  <>✓ Marcar como leída</>
-                )}
-              </button>
+      <Card className="p-4 space-y-3">
+        <h2 className="font-semibold text-slate-700 text-sm">Adherencia semanal</h2>
+
+        {loading ? (
+          <div className="flex justify-between">
+            {[0,1,2,3,4,5,6].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
+                <div className="w-3 h-2 bg-slate-100 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="flex justify-between">
+              {weekDays.map((day, i) => {
+                const key      = toDateKey(day);
+                const isFuture = key > todayKey;
+                const isToday  = key === todayKey;
+                const hasLog   = diarioFechasSet.has(key);
+
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    {/* Dot */}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                        isFuture
+                          ? 'bg-slate-100'
+                          : hasLog
+                          ? 'bg-green-500 shadow-sm shadow-green-200'
+                          : 'bg-slate-200'
+                      } ${isToday ? 'ring-2 ring-offset-1 ring-brand-400' : ''}`}
+                    >
+                      {!isFuture && hasLog && (
+                        <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-5.121-5.121a1 1 0 111.414-1.414L8.414 12.172l6.879-6.879a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    {/* Label día */}
+                    <span
+                      className={`text-[10px] font-semibold ${
+                        isToday
+                          ? 'text-brand-600'
+                          : isFuture
+                          ? 'text-slate-300'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {['L','M','M','J','V','S','D'][i]}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Streak o aliento */}
+            <p className="text-xs text-center text-slate-500">
+              {streak >= 7 ? (
+                <>🏆 <span className="font-bold text-green-600">¡Semana perfecta!</span> Llevas {streak} días seguidos</>
+              ) : streak > 1 ? (
+                <>🔥 Llevas <span className="font-bold text-green-600">{streak} días seguidos</span> registrando</>
+              ) : streak === 1 ? (
+                <>✅ Registraste hoy, <span className="font-medium text-slate-600">¡seguí así!</span></>
+              ) : (
+                <>📸 Registrá tu primera comida del día</>
+              )}
+            </p>
+          </>
+        )}
+      </Card>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          NOTAS DEL NUTRIÓLOGO (solo si hay notificaciones no leídas)
+      ══════════════════════════════════════════════════════════════════════ */}
+      {!loading && notifVisibles.length > 0 && (
+        <Card className="p-4 space-y-3">
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <span className="text-base leading-none">🔔</span>
+            <h2 className="font-semibold text-slate-700 text-sm flex-1">
+              Notas del nutriólogo
+            </h2>
+            <span className="text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+              {notifVisibles.length}
+            </span>
+          </div>
+
+          {/* Lista de notas */}
+          <div className="space-y-3">
+            {notifVisibles.map((notif, idx) => (
+              <div key={notif.id}>
+                {idx > 0 && <div className="border-t border-slate-100 mb-3" />}
+                <div className="flex gap-2.5">
+                  {/* Acento lateral */}
+                  <div className="w-0.5 bg-brand-300 rounded-full flex-shrink-0 self-stretch" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      {notif.mensaje}
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-slate-400">
+                        {formatNotifFecha(notif.created_at)}
+                      </span>
+                      <button
+                        onClick={() => marcarLeida(notif.id)}
+                        disabled={marcandoId === notif.id}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:text-brand-800 transition-colors disabled:opacity-50"
+                      >
+                        {marcandoId === notif.id ? (
+                          <>
+                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                            </svg>
+                            Marcando…
+                          </>
+                        ) : (
+                          <>✓ Leída</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}

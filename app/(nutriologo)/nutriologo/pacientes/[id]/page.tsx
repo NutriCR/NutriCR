@@ -50,6 +50,7 @@ interface PacienteDetalle {
   email: string;
   objetivo: string | null;
   condiciones_medicas: string[];
+  alergias: string[];             // ← nuevo
   peso: number | null;
   altura: number | null;
   fecha_nacimiento: string | null;
@@ -100,6 +101,7 @@ const MOCK_PACIENTE: PacienteDetalle = {
   email:               'ana.gonzalez@email.com',
   objetivo:            'Bajar grasa',
   condiciones_medicas: ['Hipotiroidismo', 'Resistencia a la insulina'],
+  alergias:            ['Mariscos', 'Nueces'],   // ← nuevo
   peso:                68.8,
   altura:              1.62,
   fecha_nacimiento:    '1990-04-15',
@@ -495,6 +497,11 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   const [nuevoPad,         setNuevoPad]         = useState('');
   const [savingPad,        setSavingPad]        = useState(false);
 
+  // Alergias
+  const [alergias,         setAlergias]         = useState<string[]>([]);
+  const [nuevaAlergia,     setNuevaAlergia]     = useState('');
+  const [savingAlergias,   setSavingAlergias]   = useState(false);
+
   // Plan nutricional
   const [planEdit, setPlanEdit] = useState({
     calorias:  0,
@@ -550,6 +557,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         setPaciente(MOCK_PACIENTE);
         setObjetivo(MOCK_PACIENTE.objetivo ?? '');
         setPadecimientos(MOCK_PACIENTE.condiciones_medicas);
+        setAlergias(MOCK_PACIENTE.alergias);
         setPlan(MOCK_PLAN);
         setPlanEdit({
           calorias:     MOCK_PLAN.calorias_diarias  ?? 0,
@@ -569,6 +577,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       setPaciente(p);
       setObjetivo(p.objetivo ?? '');
       setPadecimientos(p.condiciones_medicas ?? []);
+      setAlergias(p.alergias ?? []);
       setAdherencia(adh);
 
       if (pl) {
@@ -650,6 +659,37 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       showToast('Error al guardar padecimientos', 'err');
     } finally {
       setSavingPad(false);
+    }
+  }
+
+  // ── Alergias ────────────────────────────────────────────────────────────────
+
+  function handleAgregarAlergia() {
+    const trim = nuevaAlergia.trim();
+    if (!trim || alergias.includes(trim)) return;
+    setAlergias((prev) => [...prev, trim]);
+    setNuevaAlergia('');
+  }
+
+  function handleEliminarAlergia(a: string) {
+    setAlergias((prev) => prev.filter((x) => x !== a));
+  }
+
+  async function handleGuardarAlergias() {
+    if (isMock) { showToast('Modo demo — cambios no persisten', 'err'); return; }
+    setSavingAlergias(true);
+    try {
+      const res = await fetch(`/api/pacientes/${pacienteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alergias }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Alergias guardadas');
+    } catch {
+      showToast('Error al guardar alergias', 'err');
+    } finally {
+      setSavingAlergias(false);
     }
   }
 
@@ -999,62 +1039,123 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       </SectionCard>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          3. PADECIMIENTOS
+          3. PADECIMIENTOS + ALERGIAS (grid 2 columnas)
       ══════════════════════════════════════════════════════════════════════ */}
-      <SectionCard
-        title="Padecimientos"
-        icon="🩺"
-        action={
-          <button
-            onClick={handleGuardarPadecimientos}
-            disabled={savingPad}
-            className="text-xs font-semibold text-brand-600 hover:text-brand-800 disabled:opacity-50 transition-colors"
-          >
-            {savingPad ? 'Guardando…' : 'Guardar cambios'}
-          </button>
-        }
-      >
-        {/* Lista de chips */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {padecimientos.length === 0 && (
-            <p className="text-sm text-slate-400">Sin padecimientos registrados</p>
-          )}
-          {padecimientos.map((pad) => (
-            <span
-              key={pad}
-              className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-sm font-medium px-3 py-1.5 rounded-full"
-            >
-              {pad}
-              <button
-                onClick={() => handleEliminarPadecimiento(pad)}
-                className="text-red-400 hover:text-red-700 leading-none ml-0.5 text-base"
-                aria-label={`Eliminar ${pad}`}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-        {/* Agregar nuevo */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={nuevoPad}
-            onChange={(e) => setNuevoPad(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAgregarPadecimiento()}
-            placeholder="Ej: Diabetes tipo 2, Hipertensión…"
-            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-          />
-          <button
-            onClick={handleAgregarPadecimiento}
-            disabled={!nuevoPad.trim()}
-            className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium disabled:opacity-40 transition-colors"
-          >
-            + Agregar
-          </button>
-        </div>
-      </SectionCard>
+        {/* ── Padecimientos ── */}
+        <SectionCard
+          title="Padecimientos"
+          icon="🩺"
+          action={
+            <button
+              onClick={handleGuardarPadecimientos}
+              disabled={savingPad}
+              className="text-xs font-semibold text-brand-600 hover:text-brand-800 disabled:opacity-50 transition-colors"
+            >
+              {savingPad ? 'Guardando…' : 'Guardar'}
+            </button>
+          }
+        >
+          {/* Chips */}
+          <div className="flex flex-wrap gap-2 mb-4 min-h-[2rem]">
+            {padecimientos.length === 0 && (
+              <p className="text-sm text-slate-400">Sin padecimientos registrados</p>
+            )}
+            {padecimientos.map((pad) => (
+              <span
+                key={pad}
+                className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-sm font-medium px-3 py-1.5 rounded-full"
+              >
+                {pad}
+                <button
+                  onClick={() => handleEliminarPadecimiento(pad)}
+                  className="text-red-400 hover:text-red-700 leading-none ml-0.5 text-base"
+                  aria-label={`Eliminar ${pad}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Agregar */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nuevoPad}
+              onChange={(e) => setNuevoPad(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAgregarPadecimiento()}
+              placeholder="Ej: Diabetes tipo 2…"
+              className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+            <button
+              onClick={handleAgregarPadecimiento}
+              disabled={!nuevoPad.trim()}
+              className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium disabled:opacity-40 transition-colors"
+            >
+              + Agregar
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* ── Alergias ── */}
+        <SectionCard
+          title="Alergias"
+          icon="⚠️"
+          action={
+            <button
+              onClick={handleGuardarAlergias}
+              disabled={savingAlergias}
+              className="text-xs font-semibold text-brand-600 hover:text-brand-800 disabled:opacity-50 transition-colors"
+            >
+              {savingAlergias ? 'Guardando…' : 'Guardar'}
+            </button>
+          }
+        >
+          {/* Chips */}
+          <div className="flex flex-wrap gap-2 mb-4 min-h-[2rem]">
+            {alergias.length === 0 && (
+              <p className="text-sm text-slate-400">Sin alergias registradas</p>
+            )}
+            {alergias.map((a) => (
+              <span
+                key={a}
+                className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-sm font-medium px-3 py-1.5 rounded-full"
+              >
+                {a}
+                <button
+                  onClick={() => handleEliminarAlergia(a)}
+                  className="text-amber-400 hover:text-amber-700 leading-none ml-0.5 text-base"
+                  aria-label={`Eliminar ${a}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Agregar */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nuevaAlergia}
+              onChange={(e) => setNuevaAlergia(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAgregarAlergia()}
+              placeholder="Ej: Mariscos, Maní…"
+              className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+            <button
+              onClick={handleAgregarAlergia}
+              disabled={!nuevaAlergia.trim()}
+              className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium disabled:opacity-40 transition-colors"
+            >
+              + Agregar
+            </button>
+          </div>
+        </SectionCard>
+
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
           4. PLAN NUTRICIONAL
