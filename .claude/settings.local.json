@@ -36,7 +36,8 @@
       "Bash(npx tsc *)",
       "Bash(npx next *)",
       "Bash(git -C /Users/macdejose/NutriCR add lib/supabase/auth-helpers.ts components/paciente/BottomNav.tsx)",
-      "Bash(git -C /Users/macdejose/NutriCR add components/paciente/BottomNav.tsx 'app/\\(paciente\\)/paciente/diario/page.tsx')"
+      "Bash(git -C /Users/macdejose/NutriCR add components/paciente/BottomNav.tsx 'app/\\(paciente\\)/paciente/diario/page.tsx')",
+      "Bash(git -C /Users/macdejose/NutriCR add app/api/paciente/nutriologo/route.ts 'app/\\(paciente\\)/paciente/perfil/page.tsx')"
     ]
   }
 }
