@@ -35,7 +35,8 @@
       "Bash(sed -n '983,990p' /Users/macdejose/NutriCR/app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
       "Bash(npx tsc *)",
       "Bash(npx next *)",
-      "Bash(git -C /Users/macdejose/NutriCR add lib/supabase/auth-helpers.ts components/paciente/BottomNav.tsx)"
+      "Bash(git -C /Users/macdejose/NutriCR add lib/supabase/auth-helpers.ts components/paciente/BottomNav.tsx)",
+      "Bash(git -C /Users/macdejose/NutriCR add components/paciente/BottomNav.tsx 'app/\\(paciente\\)/paciente/diario/page.tsx')"
     ]
   }
 }
