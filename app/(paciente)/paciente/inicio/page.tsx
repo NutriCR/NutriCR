@@ -48,13 +48,15 @@ interface Notificacion {
 type TipoComida = 'desayuno' | 'almuerzo' | 'cena' | 'merienda';
 
 interface InicioData {
-  mediciones:     Medicion[];
-  plan:           Plan | null;
-  recetaSugerida: Receta | null;
-  notificaciones: Notificacion[];     // ← array (máx 2 no leídas)
-  diarioFechas:   string[];           // ← ISO timestamps del diario (30 días)
-  tipoComida:     TipoComida;
-  paciente:       { nombre: string; apellido: string | null };
+  mediciones:      Medicion[];
+  plan:            Plan | null;
+  recetaSugerida:  Receta | null;
+  notificaciones:  Notificacion[];
+  diarioFechas:    string[];       // ISO timestamps del diario (últimos 30 días)
+  tipoComida:      TipoComida;
+  paciente:        { nombre: string; apellido: string | null };
+  recetasSemana:   number;         // recetas generadas en los últimos 7 días
+  escaneosSemana:  number;         // escaneos de tiquete en los últimos 7 días
 }
 
 type Metrica = 'peso' | 'grasa' | 'musculo';
@@ -146,6 +148,14 @@ function calcStreak(diarioFechasSet: Set<string>, today: Date): number {
     }
   }
   return streak;
+}
+
+/** Adherencia 0-100 con la fórmula 80/10/10. */
+function calcAdherenciaPct(fotosUnicos: number, recetasCount: number, escaneosCount: number): number {
+  const fotos    = (Math.min(fotosUnicos,   7) / 7) * 80;
+  const recetas  = (Math.min(recetasCount,  3) / 3) * 10;
+  const escaneos =  Math.min(escaneosCount, 1)       * 10;
+  return Math.round(fotos + recetas + escaneos);
 }
 
 /** Fecha relativa compacta para notas (ej. "Hoy", "Ayer", "23 may"). */
@@ -315,6 +325,24 @@ export default function InicioPage() {
   const streak = useMemo(
     () => calcStreak(diarioFechasSet, today),
     [diarioFechasSet, today],
+  );
+
+  // Días únicos con foto esta semana (para el score de adherencia)
+  const fotosUnicasSemana = useMemo(() => {
+    let count = 0;
+    for (const day of weekDays) {
+      if (toDateKey(day) <= todayKey && diarioFechasSet.has(toDateKey(day))) count++;
+    }
+    return count;
+  }, [weekDays, todayKey, diarioFechasSet]);
+
+  const adherenciaPct = useMemo(
+    () => calcAdherenciaPct(
+      fotosUnicasSemana,
+      data?.recetasSemana  ?? 0,
+      data?.escaneosSemana ?? 0,
+    ),
+    [fotosUnicasSemana, data?.recetasSemana, data?.escaneosSemana],
   );
 
   // ── Notificaciones visibles (filtramos las ya marcadas en esta sesión) ──────
@@ -572,7 +600,24 @@ export default function InicioPage() {
           ADHERENCIA SEMANAL
       ══════════════════════════════════════════════════════════════════════ */}
       <Card className="p-4 space-y-3">
-        <h2 className="font-semibold text-slate-700 text-sm">Adherencia semanal</h2>
+
+        {/* Header: título + score */}
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-slate-700 text-sm">Adherencia semanal</h2>
+          {!loading && (
+            <span
+              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                adherenciaPct >= 70
+                  ? 'bg-green-100 text-green-700'
+                  : adherenciaPct >= 40
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-red-100 text-red-700'
+              }`}
+            >
+              {adherenciaPct}%
+            </span>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex justify-between">
@@ -585,6 +630,7 @@ export default function InicioPage() {
           </div>
         ) : (
           <>
+            {/* Puntos semanales */}
             <div className="flex justify-between">
               {weekDays.map((day, i) => {
                 const key      = toDateKey(day);
@@ -594,7 +640,6 @@ export default function InicioPage() {
 
                 return (
                   <div key={i} className="flex flex-col items-center gap-1.5">
-                    {/* Dot */}
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                         isFuture
@@ -610,7 +655,6 @@ export default function InicioPage() {
                         </svg>
                       )}
                     </div>
-                    {/* Label día */}
                     <span
                       className={`text-[10px] font-semibold ${
                         isToday
@@ -625,6 +669,42 @@ export default function InicioPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Barra de progreso */}
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-1.5 rounded-full transition-all duration-700 ${
+                  adherenciaPct >= 70
+                    ? 'bg-green-500'
+                    : adherenciaPct >= 40
+                    ? 'bg-amber-400'
+                    : 'bg-red-500'
+                }`}
+                style={{ width: `${adherenciaPct}%` }}
+              />
+            </div>
+
+            {/* Desglose de componentes */}
+            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+              <span>
+                📸 Fotos&nbsp;
+                <span className={fotosUnicasSemana > 0 ? 'text-green-600 font-semibold' : ''}>
+                  {fotosUnicasSemana}/7
+                </span>
+              </span>
+              <span>
+                🍽 Recetas&nbsp;
+                <span className={(data?.recetasSemana ?? 0) > 0 ? 'text-green-600 font-semibold' : ''}>
+                  {data?.recetasSemana ?? 0}/3
+                </span>
+              </span>
+              <span>
+                🛒 Tiquete&nbsp;
+                <span className={(data?.escaneosSemana ?? 0) > 0 ? 'text-green-600 font-semibold' : ''}>
+                  {Math.min(data?.escaneosSemana ?? 0, 1)}/1
+                </span>
+              </span>
             </div>
 
             {/* Streak o aliento */}

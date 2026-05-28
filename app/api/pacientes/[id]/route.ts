@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireNutriologo } from '@/lib/supabase/auth-helpers';
+import { calcAdherencia, calcEstado, toCRDateKey } from '@/lib/adherencia';
 
 // ── GET /api/pacientes/[id] ────────────────────────────────────────────────────
 
@@ -29,21 +30,60 @@ export async function GET(
     return NextResponse.json({ error: 'Sin acceso a este paciente' }, { status: 403 });
   }
 
-  const { data: plan } = await supabase
-    .from('planes_nutricionales')
-    .select('*')
-    .eq('paciente_id', id)
-    .eq('activo', true)
-    .maybeSingle();
-
   const hace7 = new Date(Date.now() - 7 * 86_400_000).toISOString();
-  const { count } = await supabase
-    .from('recetas_generadas')
-    .select('id', { count: 'exact', head: true })
-    .eq('paciente_id', id)
-    .gte('created_at', hace7);
+  const hace3 = new Date(Date.now() - 3 * 86_400_000).toISOString();
 
-  const adherencia = Math.min(100, Math.round(((count ?? 0) / 7) * 100));
+  const [planRes, fotosRes, recetasRes] = await Promise.all([
+
+    supabase
+      .from('planes_nutricionales')
+      .select('*')
+      .eq('paciente_id', id)
+      .eq('activo', true)
+      .maybeSingle(),
+
+    supabase
+      .from('diario_comidas')
+      .select('created_at')
+      .eq('paciente_id', id)
+      .gte('created_at', hace7),
+
+    supabase
+      .from('recetas_generadas')
+      .select('created_at')
+      .eq('paciente_id', id)
+      .gte('created_at', hace7),
+
+    // Placeholder — escaneos se obtienen por separado (requiere migración en BD)
+    Promise.resolve({ data: [] as never[] }),
+  ]);
+
+  const plan = planRes.data;
+
+  // Escaneos de tiquete: query separada hasta que se aplique la migración de paciente_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const escaneosRaw = await (supabase as any)
+    .from('inventario')
+    .select('id')
+    .eq('paciente_id', id)
+    .gte('created_at', hace7)
+    .catch(() => ({ data: null }));
+
+  // Días únicos con foto en los últimos 7 días
+  const fotosUnicos = new Set(
+    (fotosRes.data ?? []).map((f) => toCRDateKey(f.created_at as string)),
+  ).size;
+
+  const recetasCount  = (recetasRes.data  ?? []).length;
+  const escaneosCount = (escaneosRaw.data ?? []).length;
+
+  // ¿Tiene alguna foto en los últimos 3 días?
+  const sinFotoReciente = !(fotosRes.data ?? []).some(
+    (f) => (f.created_at as string) >= hace3,
+  );
+
+  const adherencia = calcAdherencia({ fotosUnicos, recetasCount, escaneosCount });
+  const estado     = calcEstado(adherencia, sinFotoReciente);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const usuario = (paciente as any).usuarios as { nombre: string; apellido: string | null; email: string } | null;
@@ -56,13 +96,14 @@ export async function GET(
       email:               usuario?.email               ?? '',
       objetivo:            paciente.objetivo,
       condiciones_medicas: paciente.condiciones_medicas ?? [],
-      alergias:            paciente.alergias            ?? [],   // ← nuevo
+      alergias:            paciente.alergias            ?? [],
       peso:                paciente.peso,
       altura:              paciente.altura,
       fecha_nacimiento:    paciente.fecha_nacimiento,
     },
     plan: plan ?? null,
     adherencia,
+    estado,          // 'Al día' | 'Revisar' | 'Urgente'
   });
 }
 

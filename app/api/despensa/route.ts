@@ -35,13 +35,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = productos.map((p) => ({
       nutriologo_id: nutriologoId,
+      paciente_id:   auth.data.pacienteId,   // requiere migración: ALTER TABLE inventario ADD COLUMN paciente_id uuid
       nombre:        p.nombre,
       unidad_medida: p.unidad,
       stock:         p.cantidad,
       categoria:     'tiquete-escaneado',
-    }));
+    })) as any[];
 
     const { data, error } = await createAdminClient()
       .from('inventario')

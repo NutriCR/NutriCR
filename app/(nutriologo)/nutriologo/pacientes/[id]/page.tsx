@@ -144,10 +144,10 @@ const MOCK_NOTAS: Nota[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getEstado(pct: number) {
-  if (pct >= 70) return { label: 'Al día',  bg: 'bg-green-100', text: 'text-green-700',  dot: 'bg-green-500'  };
-  if (pct >= 40) return { label: 'Revisar', bg: 'bg-amber-100', text: 'text-amber-700',  dot: 'bg-amber-500'  };
-  return             { label: 'Urgente',   bg: 'bg-red-100',   text: 'text-red-700',    dot: 'bg-red-500'    };
+function getEstado(estado: string) {
+  if (estado === 'Al día')  return { label: 'Al día',  bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' };
+  if (estado === 'Revisar') return { label: 'Revisar', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' };
+  return                           { label: 'Urgente', bg: 'bg-red-100',   text: 'text-red-700',   dot: 'bg-red-500'   };
 }
 
 function formatFecha(iso: string) {
@@ -484,6 +484,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   const [notas,       setNotas]       = useState<Nota[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [adherencia,  setAdherencia]  = useState(0);
+  const [estadoStr,   setEstadoStr]   = useState<string>('');
   const [isMock,      setIsMock]      = useState(false);
 
   // ── Section edit state ──────────────────────────────────────────────────────
@@ -569,16 +570,18 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         setMediciones(MOCK_MEDICIONES);
         setNotas(MOCK_NOTAS);
         setAdherencia(72);
+        setEstadoStr('Al día');
         setCargandoDiario(false);
         return;
       }
 
-      const { paciente: p, plan: pl, adherencia: adh } = await resP.json();
+      const { paciente: p, plan: pl, adherencia: adh, estado: est } = await resP.json();
       setPaciente(p);
       setObjetivo(p.objetivo ?? '');
       setPadecimientos(p.condiciones_medicas ?? []);
       setAlergias(p.alergias ?? []);
-      setAdherencia(adh);
+      setAdherencia(adh ?? 0);
+      setEstadoStr(est ?? '');
 
       if (pl) {
         setPlan(pl);
@@ -834,7 +837,9 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const estado        = getEstado(adherencia);
+  // Usar estado de la API si está disponible; si no, calcularlo del porcentaje (fallback)
+  const estadoLabel = estadoStr || (adherencia >= 70 ? 'Al día' : adherencia >= 40 ? 'Revisar' : 'Urgente');
+  const estado      = getEstado(estadoLabel);
   const nombreCompleto = paciente ? `${paciente.nombre}${paciente.apellido ? ' ' + paciente.apellido : ''}` : '';
   const hasLeftAxis   = METRICAS.some((m) => m.axis === 'left'  && visibleMetrics.has(m.key));
   const hasRightAxis  = METRICAS.some((m) => m.axis === 'right' && visibleMetrics.has(m.key));

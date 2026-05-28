@@ -39,7 +39,8 @@
       "Bash(git -C /Users/macdejose/NutriCR add components/paciente/BottomNav.tsx 'app/\\(paciente\\)/paciente/diario/page.tsx')",
       "Bash(git -C /Users/macdejose/NutriCR add app/api/paciente/nutriologo/route.ts 'app/\\(paciente\\)/paciente/perfil/page.tsx')",
       "Bash(git -C /Users/macdejose/NutriCR add app/\\\\\\(nutriologo\\\\\\)/nutriologo/pacientes/\\\\[id\\\\]/page.tsx)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('main:', d.get\\('main'\\), 'module:', d.get\\('module'\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('main:', d.get\\('main'\\), 'module:', d.get\\('module'\\)\\)\")",
+      "Bash(git -C /Users/macdejose/NutriCR diff --stat HEAD)"
     ]
   }
 }

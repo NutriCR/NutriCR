@@ -31,8 +31,9 @@ export async function GET() {
   const admin      = createAdminClient();
   const tipoComida = getTipoComida();
 
-  // Inicio de ventana para adherencia: hace 30 días (cubre streak y semana actual)
+  // Ventanas de tiempo
   const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const hace7  = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000).toISOString();
 
   // Ejecutar todas las consultas en paralelo
   const [
@@ -42,6 +43,8 @@ export async function GET() {
     notifRes,
     diarioRes,
     usuarioRes,
+    recetasSemanaRes,
+    /* placeholder for escaneos */,
   ] = await Promise.all([
 
     // Últimas 12 mediciones, orden ascendente para la gráfica
@@ -94,21 +97,44 @@ export async function GET() {
       .select('nombre, apellido')
       .eq('id', userId)
       .maybeSingle(),
+
+    // Recetas generadas esta semana (para cálculo de adherencia en pantalla)
+    admin
+      .from('recetas_generadas')
+      .select('id', { count: 'exact', head: true })
+      .eq('paciente_id', pacienteId)
+      .gte('created_at', hace7),
+
+    // Placeholder — escaneos se obtienen por separado (requiere migración en BD)
+    Promise.resolve({ count: 0 }),
   ]);
+
+  // Escaneos de tiquete: query separada hasta que se aplique la migración de paciente_id
+  // ALTER TABLE inventario ADD COLUMN IF NOT EXISTS paciente_id uuid REFERENCES pacientes(id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const escaneosRaw = await (admin as any)
+    .from('inventario')
+    .select('id', { count: 'exact', head: true })
+    .eq('paciente_id', pacienteId)
+    .gte('created_at', hace7)
+    .catch(() => ({ count: 0 }));
 
   // Extraer solo las fechas ISO del diario (el cliente agrupa por día local)
   const diarioFechas = (diarioRes.data ?? []).map((r) => r.created_at as string);
 
   return NextResponse.json({
-    mediciones:    medicionesRes.data ?? [],
-    plan:          planRes.data       ?? null,
-    recetaSugerida: recetaRes.data    ?? null,
-    notificaciones: notifRes.data     ?? [],   // ← array en vez de single
-    diarioFechas,                              // ← nuevo: para adherencia
+    mediciones:      medicionesRes.data  ?? [],
+    plan:            planRes.data        ?? null,
+    recetaSugerida:  recetaRes.data      ?? null,
+    notificaciones:  notifRes.data       ?? [],
+    diarioFechas,
     tipoComida,
     paciente: {
       nombre:   usuarioRes.data?.nombre   ?? 'Paciente',
       apellido: usuarioRes.data?.apellido ?? null,
     },
+    // Componentes de adherencia para mostrar desglose en pantalla de inicio
+    recetasSemana:  recetasSemanaRes.count ?? 0,
+    escaneosSemana: escaneosRaw.count      ?? 0,
   });
 }

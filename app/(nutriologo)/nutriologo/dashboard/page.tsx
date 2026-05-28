@@ -12,7 +12,8 @@ interface PacienteRow {
   apellido: string | null;
   email: string;
   objetivo: string | null;
-  adherencia: number;          // 0–100
+  adherencia: number;           // 0–100
+  estado: string;               // 'Al día' | 'Revisar' | 'Urgente'
   ultimaActividad: string | null;
 }
 
@@ -54,10 +55,10 @@ function formatCRC(n: number) {
   }).format(n);
 }
 
-function getEstado(pct: number) {
-  if (pct >= 70) return { label: 'Al día',  bg: 'bg-green-100', text: 'text-green-700',  dot: 'bg-green-500'  };
-  if (pct >= 40) return { label: 'Revisar', bg: 'bg-amber-100', text: 'text-amber-700',  dot: 'bg-amber-500'  };
-  return             { label: 'Urgente',    bg: 'bg-red-100',   text: 'text-red-700',    dot: 'bg-red-500'    };
+function getEstado(estado: string) {
+  if (estado === 'Al día')  return { label: 'Al día',  bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' };
+  if (estado === 'Revisar') return { label: 'Revisar', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' };
+  return                           { label: 'Urgente', bg: 'bg-red-100',   text: 'text-red-700',   dot: 'bg-red-500'   };
 }
 
 function getBarColor(pct: number) {
@@ -517,7 +518,7 @@ export default function DashboardPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {pacientesFiltrados.map((p) => {
-              const estado        = getEstado(p.adherencia);
+              const estado        = getEstado(p.estado ?? (p.adherencia >= 70 ? 'Al día' : p.adherencia >= 40 ? 'Revisar' : 'Urgente'));
               const nombreCompleto = `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}`;
 
               const EstadoBadge = () => (
