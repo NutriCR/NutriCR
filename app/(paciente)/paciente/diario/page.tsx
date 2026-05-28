@@ -17,7 +17,10 @@ function formatFecha(iso: string) {
 }
 
 export default function DiarioPage() {
-  const fileInputRef              = useRef<HTMLInputElement>(null);
+  // Two separate refs: one forces camera, one opens file picker / gallery
+  const cameraInputRef  = useRef<HTMLInputElement>(null);
+  const galeriaInputRef = useRef<HTMLInputElement>(null);
+
   const [preview, setPreview]     = useState<string | null>(null);
   const [file, setFile]           = useState<File | null>(null);
   const [descripcion, setDesc]    = useState('');
@@ -63,7 +66,9 @@ export default function DiarioPage() {
     setFile(null);
     setDesc('');
     setErrorMsg(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    // Clear both inputs so the same file can be re-selected
+    if (cameraInputRef.current)  cameraInputRef.current.value  = '';
+    if (galeriaInputRef.current) galeriaInputRef.current.value = '';
   }
 
   // ── Subir foto ─────────────────────────────────────────────────────────────
@@ -98,29 +103,66 @@ export default function DiarioPage() {
   return (
     <div className="space-y-5 pb-4">
       <div>
-        <h2 className="text-lg font-bold text-slate-800">Diario de comidas</h2>
+        <h2 className="text-lg font-bold text-slate-800">Registro de comidas</h2>
         <p className="text-sm text-slate-400 mt-0.5">Fotografiá lo que comés para que tu nutriólogo pueda verlo</p>
       </div>
 
       {/* ── Zona de captura ── */}
       {!preview ? (
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-brand-200 rounded-2xl bg-brand-50 flex flex-col items-center justify-center gap-3 py-10 cursor-pointer active:bg-brand-100 transition-colors"
-        >
-          <span className="text-5xl">📸</span>
-          <p className="text-sm font-semibold text-brand-700">Tomar foto o elegir de galería</p>
-          <p className="text-xs text-brand-400">JPG · PNG · HEIC — máximo 10 MB</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handleFileChange}
-          />
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+
+            {/* ── Botón: Tomar foto (abre cámara directamente) ── */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => cameraInputRef.current?.click()}
+              onKeyDown={(e) => e.key === 'Enter' && cameraInputRef.current?.click()}
+              className="border-2 border-dashed border-brand-200 rounded-2xl bg-brand-50 flex flex-col items-center justify-center gap-2.5 py-8 cursor-pointer active:bg-brand-100 transition-colors select-none"
+            >
+              <span className="text-4xl">📷</span>
+              <div className="text-center">
+                <p className="text-sm font-bold text-brand-700">Tomar foto</p>
+                <p className="text-[11px] text-brand-400 mt-0.5">Abre la cámara</p>
+              </div>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {/* ── Botón: Elegir de galería (abre el selector de archivos) ── */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => galeriaInputRef.current?.click()}
+              onKeyDown={(e) => e.key === 'Enter' && galeriaInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 flex flex-col items-center justify-center gap-2.5 py-8 cursor-pointer active:bg-slate-100 transition-colors select-none"
+            >
+              <span className="text-4xl">🖼️</span>
+              <div className="text-center">
+                <p className="text-sm font-bold text-slate-600">Elegir foto</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Desde galería</p>
+              </div>
+              <input
+                ref={galeriaInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+          </div>
+          <p className="text-center text-[11px] text-slate-300">JPG · PNG · HEIC — máximo 10 MB</p>
         </div>
+
       ) : (
+
         /* ── Preview antes de subir ── */
         <div className="space-y-3">
           <div className="relative rounded-2xl overflow-hidden bg-slate-100 aspect-square w-full max-w-sm mx-auto">
