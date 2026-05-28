@@ -511,8 +511,10 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
     grasas:    0,
     restricciones: [] as string[],
   });
-  const [savingPlan, setSavingPlan] = useState(false);
-  const [planDirty,  setPlanDirty]  = useState(false);
+  const [savingPlan,        setSavingPlan]        = useState(false);
+  const [planDirty,         setPlanDirty]         = useState(false);
+  const [savingRestr,       setSavingRestr]       = useState(false);
+  const [restriccionesDirty, setRestriccionesDirty] = useState(false);
 
   // Diario de comidas
   const [fotoDiario,       setFotoDiario]      = useState<FotoDiario[]>([]);
@@ -713,6 +715,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       });
       if (!res.ok) throw new Error();
       setPlanDirty(false);
+      setRestriccionesDirty(false);
       showToast('Plan nutricional guardado');
     } catch {
       showToast('Error al guardar el plan', 'err');
@@ -733,7 +736,32 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         : [...prev.restricciones, r];
       return { ...prev, restricciones: next };
     });
-    setPlanDirty(true);
+    setRestriccionesDirty(true);
+  }
+
+  async function handleGuardarRestricciones() {
+    if (isMock) { showToast('Modo demo — cambios no persisten', 'err'); return; }
+    setSavingRestr(true);
+    try {
+      const res = await fetch(`/api/pacientes/${pacienteId}/plan`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          calorias_diarias:         planEdit.calorias   || null,
+          proteinas_g:              planEdit.proteinas  || null,
+          carbohidratos_g:          planEdit.carbos     || null,
+          grasas_g:                 planEdit.grasas     || null,
+          restricciones_dieteticas: planEdit.restricciones,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setRestriccionesDirty(false);
+      showToast('Restricciones guardadas');
+    } catch {
+      showToast('Error al guardar las restricciones', 'err');
+    } finally {
+      setSavingRestr(false);
+    }
   }
 
   async function handleEnviarNota() {
@@ -1163,7 +1191,48 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          4. PLAN NUTRICIONAL
+          4. RESTRICCIONES DIETÉTICAS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <SectionCard
+        title="Restricciones dietéticas"
+        icon="🚫"
+        action={
+          restriccionesDirty ? (
+            <button
+              onClick={handleGuardarRestricciones}
+              disabled={savingRestr}
+              className="text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+            >
+              {savingRestr ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          ) : (
+            <span className="text-xs text-slate-400">Sin cambios pendientes</span>
+          )
+        }
+      >
+        <div className="flex flex-wrap gap-2">
+          {RESTRICCIONES_OPCIONES.map((r) => {
+            const active = planEdit.restricciones.includes(r);
+            return (
+              <button
+                key={r}
+                onClick={() => toggleRestriccion(r)}
+                className={cn(
+                  'text-sm font-medium px-3 py-1.5 rounded-full border transition-all',
+                  active
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:text-brand-600',
+                )}
+              >
+                {active && <span className="mr-1">✓</span>}{r}
+              </button>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          5. PLAN NUTRICIONAL
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard
         title="Plan nutricional"
@@ -1200,7 +1269,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
         </div>
 
         {/* Macros */}
-        <div className="mb-5">
+        <div>
           <label className="block text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">
             Distribución de macros
           </label>
@@ -1237,36 +1306,10 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
             ))}
           </div>
         </div>
-
-        {/* Restricciones */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">
-            Restricciones dietéticas
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {RESTRICCIONES_OPCIONES.map((r) => {
-              const active = planEdit.restricciones.includes(r);
-              return (
-                <button
-                  key={r}
-                  onClick={() => toggleRestriccion(r)}
-                  className={cn(
-                    'text-sm font-medium px-3 py-1.5 rounded-full border transition-all',
-                    active
-                      ? 'bg-brand-600 text-white border-brand-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:text-brand-600',
-                  )}
-                >
-                  {active && <span className="mr-1">✓</span>}{r}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </SectionCard>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          5. REGISTRO DE COMIDAS
+          6. REGISTRO DE COMIDAS
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard
         title="Registro de comidas"
@@ -1337,7 +1380,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       </SectionCard>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          6. NOTAS DEL NUTRIÓLOGO
+          7. NOTAS DEL NUTRIÓLOGO
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard title="Notas para el paciente" icon="📝">
         {/* Nueva nota */}
