@@ -35,15 +35,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = productos.map((p) => ({
       nutriologo_id: nutriologoId,
-      paciente_id:   auth.data.pacienteId,   // requiere migración: ALTER TABLE inventario ADD COLUMN paciente_id uuid
+      paciente_id:   auth.data.pacienteId,
       nombre:        p.nombre,
       unidad_medida: p.unidad,
       stock:         p.cantidad,
       categoria:     'tiquete-escaneado',
-    })) as any[];
+    }));
 
     const { data, error } = await createAdminClient()
       .from('inventario')
@@ -85,7 +84,7 @@ export async function GET() {
         'calorias_por_100g, proteinas_por_100g, carbohidratos_por_100g, grasas_por_100g, ' +
         'fecha_vencimiento, created_at',
       )
-      .eq('nutriologo_id', nutriologoId)
+      .eq('paciente_id', auth.data.pacienteId)
       .eq('categoria', 'tiquete-escaneado')
       .order('created_at', { ascending: false });
 

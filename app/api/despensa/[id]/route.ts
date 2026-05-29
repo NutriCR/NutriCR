@@ -24,7 +24,7 @@ export async function DELETE(
       .from('inventario')
       .delete()
       .eq('id', id)
-      .eq('nutriologo_id', nutriologoId); // guard: solo eliminar ítems propios
+      .eq('paciente_id', auth.data.pacienteId); // guard: solo eliminar ítems propios
 
     if (error) {
       console.error('[despensa] DELETE error:', error);

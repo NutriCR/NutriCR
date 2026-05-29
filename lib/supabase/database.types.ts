@@ -231,6 +231,7 @@ export interface Database {
         Row: {
           id: string;
           nutriologo_id: string;
+          paciente_id: string | null;
           nombre: string;
           categoria: string | null;
           unidad_medida: string | null;
@@ -239,7 +240,6 @@ export interface Database {
           carbohidratos_por_100g: number | null;
           grasas_por_100g: number | null;
           stock: number;
-          /** Requiere: ALTER TABLE inventario ADD COLUMN IF NOT EXISTS fecha_vencimiento date; */
           fecha_vencimiento: string | null;
           created_at: string;
           updated_at: string;
@@ -247,6 +247,7 @@ export interface Database {
         Insert: {
           id?: string;
           nutriologo_id: string;
+          paciente_id?: string | null;
           nombre: string;
           categoria?: string | null;
           unidad_medida?: string | null;
@@ -262,6 +263,7 @@ export interface Database {
         Update: {
           id?: string;
           nutriologo_id?: string;
+          paciente_id?: string | null;
           nombre?: string;
           categoria?: string | null;
           unidad_medida?: string | null;
@@ -279,6 +281,13 @@ export interface Database {
             columns: ['nutriologo_id'];
             isOneToOne: false;
             referencedRelation: 'nutriologos';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inventario_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
             referencedColumns: ['id'];
           },
         ];
