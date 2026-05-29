@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireNutriologo } from '@/lib/supabase/auth-helpers';
+import { sendPush } from '@/lib/web-push';
 
 // ── GET /api/pacientes/[id]/notas ──────────────────────────────────────────────
 
@@ -52,18 +53,50 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Crear notificación para el paciente (fallo silencioso — no bloquea la respuesta)
-  await admin
-    .from('notificaciones')
-    .insert({
-      paciente_id: params.id,
-      tipo:        'nota',
-      mensaje:     body.mensaje.trim(),
-      leida:       false,
-    })
-    .then(({ error: notifErr }) => {
-      if (notifErr) console.error('[notas] Error al crear notificación:', notifErr.message);
-    });
+  // Crear notificación en BD + enviar Web Push — ambos fallos son silenciosos
+  await Promise.all([
+
+    admin
+      .from('notificaciones')
+      .insert({
+        paciente_id: params.id,
+        tipo:        'nota',
+        mensaje:     body.mensaje.trim(),
+        leida:       false,
+      })
+      .then(({ error: notifErr }) => {
+        if (notifErr) console.error('[notas] Error al crear notificación:', notifErr.message);
+      }),
+
+    // Web Push — buscar suscripciones activas del paciente y notificar
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: subs } = await (admin as any)
+          .from('push_subscriptions')
+          .select('subscription')
+          .eq('paciente_id', params.id);
+
+        if (!subs?.length) return;
+
+        const preview = body.mensaje.trim().slice(0, 100);
+
+        await Promise.allSettled(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          subs.map((row: any) =>
+            sendPush(row.subscription, {
+              title: 'Mensaje de tu nutriólogo',
+              body:  preview,
+              icon:  '/icons/icon-192x192.png',
+            }),
+          ),
+        );
+      } catch (pushErr) {
+        console.error('[notas] Error enviando push:', pushErr);
+      }
+    })(),
+
+  ]);
 
   return NextResponse.json({ data }, { status: 201 });
 }

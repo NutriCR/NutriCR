@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   ResponsiveContainer,
@@ -112,6 +112,15 @@ function formatFechaHoy(): string {
 /** YYYY-MM-DD en zona local del navegador. */
 function toDateKey(d: Date): string {
   return d.toLocaleDateString('en-CA'); // 'en-CA' → YYYY-MM-DD
+}
+
+/** Convierte la clave pública VAPID (URL-safe base64) al Uint8Array que
+ *  necesita PushManager.subscribe({ applicationServerKey }). */
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = window.atob(base64);
+  return Uint8Array.from(Array.from(raw).map((c) => c.charCodeAt(0)));
 }
 
 // Abreviaciones de día (índice = getDay(), 0=Dom … 6=Sáb)
@@ -293,6 +302,10 @@ export default function InicioPage() {
   const [notifOcultas,  setNotifOcultas]  = useState<Set<string>>(new Set());
   const [marcandoId,    setMarcandoId]    = useState<string | null>(null);
 
+  // ── Push notifications ──────────────────────────────────────────────────────
+  const [pushBanner,    setPushBanner]    = useState(false);
+  const pushAttempted   = useRef(false); // evitar doble-suscripción
+
   // ── Fetch ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetch('/api/paciente/inicio')
@@ -301,6 +314,47 @@ export default function InicioPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // ── Web Push: registrar suscripción / mostrar banner ────────────────────────
+  const subscribePush = useCallback(async () => {
+    if (pushAttempted.current) return;
+    pushAttempted.current = true;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) return;
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly:      true,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as any,
+        });
+      }
+      await fetch('/api/push/subscribe', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ subscription: sub.toJSON() }),
+      });
+    } catch {
+      // Push no disponible o el usuario lo rechazó — silencioso
+    }
+  }, []);
+
+  useEffect(() => {
+    // Push requiere SW + PushManager (no disponible en todos los browsers)
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    const perm = Notification.permission;
+    if (perm === 'denied') return;       // ya denegado — no molestar
+    if (perm === 'granted') {
+      subscribePush();                   // ya tiene permiso → suscribir silenciosamente
+      return;
+    }
+    // perm === 'default' → mostrar banner una vez
+    setPushBanner(true);
+  }, [subscribePush]);
 
   // ── Chart data (memoized) ───────────────────────────────────────────────────
   const chartData = useMemo(
@@ -381,6 +435,17 @@ export default function InicioPage() {
     [data?.notificaciones, notifOcultas],
   );
 
+  // ── Solicitar permiso de push (desde el banner) ─────────────────────────────
+  async function requestPushPermission() {
+    setPushBanner(false);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') await subscribePush();
+    } catch {
+      // silencioso
+    }
+  }
+
   // ── Marcar una notificación como leída ──────────────────────────────────────
   async function marcarLeida(id: string) {
     setMarcandoId(id);
@@ -460,6 +525,35 @@ export default function InicioPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 pb-4">
+
+      {/* ── Banner: activar notificaciones push ────────────────────────────── */}
+      {pushBanner && (
+        <div className="flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3">
+          <span className="mt-0.5 text-xl leading-none">🔔</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-green-800 leading-snug">
+              Activa las notificaciones
+            </p>
+            <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
+              Recibe alertas cuando tu nutriólogo te envíe un mensaje.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <button
+              onClick={requestPushPermission}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 active:scale-95 transition-all"
+            >
+              Activar
+            </button>
+            <button
+              onClick={() => setPushBanner(false)}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 active:scale-95 transition-all"
+            >
+              Ahora no
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Saludo ─────────────────────────────────────────────────────────── */}
       <div className="pt-2">

@@ -617,6 +617,35 @@ export interface Database {
           },
         ];
       };
+
+      push_subscriptions: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          endpoint: string;
+          subscription: Json;   // Full PushSubscriptionJSON stored for webpush.sendNotification()
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          endpoint: string;
+          subscription: Json;
+          created_at?: string;
+        };
+        Update: {
+          subscription?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'push_subscriptions_paciente_id_fkey';
+            columns: ['paciente_id'];
+            isOneToOne: false;
+            referencedRelation: 'pacientes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
   };
 }

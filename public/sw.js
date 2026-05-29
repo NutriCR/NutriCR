@@ -1,8 +1,11 @@
-// ── v3: fix "Response served by service worker has redirections" en iOS ───────
-// Las navegaciones (mode === 'navigate') se dejan pasar SIEMPRE a la red.
-// Esto garantiza que la ruta raíz "/" y cualquier redirección de autenticación
-// las resuelva Next.js en el servidor, sin interferencia del service worker.
-const CACHE_NAME = 'nutricr-v3';
+// ── v4: push notifications + fix "Response served by service worker has
+//        redirections" en iOS ─────────────────────────────────────────────────
+//
+// Cambios respecto a v3:
+//   • Agrega manejadores `push` y `notificationclick` para Web Push API.
+//   • Versión de caché bumpeada para que el SW viejo sea reemplazado.
+
+const CACHE_NAME = 'nutricr-v4';
 
 // Sólo se pre-cachean assets estáticos de la app del paciente, nunca HTML.
 const STATIC_ASSETS = [
@@ -68,5 +71,54 @@ self.addEventListener('fetch', (event) => {
       });
       return cached ?? networkFetch;
     }),
+  );
+});
+
+// ── Web Push ─────────────────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'NutriCR', body: 'Tienes un nuevo mensaje.' };
+  try {
+    if (event.data) payload = event.data.json();
+  } catch {
+    // payload remains default
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body:  payload.body,
+      icon:  payload.icon  ?? '/icons/icon-192x192.png',
+      badge: '/icons/icon-96x96.png',
+      // Vibration pattern (ms on/off) — ignored on desktop
+      vibrate: [200, 100, 200],
+      // Keep notification visible until user interacts with it
+      requireInteraction: false,
+      data: { url: '/paciente/inicio' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url ?? '/paciente/inicio';
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // If the app is already open in a tab, focus it and navigate
+        for (const client of windowClients) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.focus();
+            if ('navigate' in client) client.navigate(targetUrl);
+            return;
+          }
+        }
+        // Otherwise open a new tab
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      }),
   );
 });

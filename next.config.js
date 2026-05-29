@@ -18,7 +18,7 @@ const CSP = [
 const nextConfig = {
   experimental: {
     // Next.js 14.2 still uses this key (renamed to serverExternalPackages in Next.js 15)
-    serverComponentsExternalPackages: ['@anthropic-ai/sdk'],
+    serverComponentsExternalPackages: ['@anthropic-ai/sdk', 'web-push'],
   },
   // Aumenta el límite del body parser para rutas API (Pages Router y dev server).
   // Para App Router Route Handlers el límite real lo controla el servidor/Vercel,
