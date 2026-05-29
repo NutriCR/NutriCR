@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SLIDES = [
-  { src: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200', origin: 'center center' },
-  { src: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200', origin: 'top right'    },
-  { src: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200', origin: 'bottom left'  },
-  { src: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200', origin: 'center right' },
-  { src: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=1200',    origin: 'top left'     },
+  { src: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd', origin: 'center center' },
+  { src: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061', origin: 'top right'    },
+  { src: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352', origin: 'bottom left'  },
+  { src: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836', origin: 'center right' },
+  { src: 'https://images.unsplash.com/photo-1547592180-85f173990554',    origin: 'top left'     },
 ];
 const SLIDE_DURATION_MS = 4500;
 
