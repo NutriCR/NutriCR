@@ -16,10 +16,16 @@ function formatFecha(iso: string) {
   });
 }
 
-// ─── Conversión a JPEG via canvas ─────────────────────────────────────────────
-// Convierte cualquier formato (HEIC, HEIF, PNG, WEBP, JPG, …) a un Blob JPEG.
+// ─── Conversión + compresión a JPEG via canvas ───────────────────────────────
+// • Convierte cualquier formato (HEIC, HEIF, PNG, WEBP, JPG, …) a JPEG.
+// • Escala al máximo de MAX_PX en el lado más largo, manteniendo la proporción.
+// • Calidad 0.80 → archivos típicos de 200-600 KB, bien por debajo del límite.
 // iOS puede mostrar HEIC en <img> de forma nativa, así que la carga funciona
 // en Safari; canvas luego exporta el contenido como JPEG estándar.
+
+const MAX_PX   = 1920;
+const JPEG_Q   = 0.80;
+
 async function toJpegBlob(file: File): Promise<Blob> {
   // 1. Cargar el archivo en un elemento <img>
   const objectUrl = URL.createObjectURL(file);
@@ -35,22 +41,35 @@ async function toJpegBlob(file: File): Promise<Blob> {
     throw new Error('La imagen no tiene dimensiones válidas');
   }
 
-  // 2. Dibujar en canvas
+  // 2. Calcular dimensiones con cap de MAX_PX en el lado mayor
+  let w = img.naturalWidth;
+  let h = img.naturalHeight;
+  if (w > MAX_PX || h > MAX_PX) {
+    if (w >= h) {
+      h = Math.round(h * MAX_PX / w);
+      w = MAX_PX;
+    } else {
+      w = Math.round(w * MAX_PX / h);
+      h = MAX_PX;
+    }
+  }
+
+  // 3. Dibujar en canvas con las dimensiones finales
   const canvas = document.createElement('canvas');
-  canvas.width  = img.naturalWidth;
-  canvas.height = img.naturalHeight;
+  canvas.width  = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas no disponible en este dispositivo');
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(img, 0, 0, w, h);
 
-  // 3. Exportar como JPEG (calidad 0.85 — buen balance tamaño / nitidez)
+  // 4. Exportar como JPEG
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => blob
         ? resolve(blob)
         : reject(new Error('Error al generar el JPEG desde canvas')),
       'image/jpeg',
-      0.85,
+      JPEG_Q,
     );
   });
 }
