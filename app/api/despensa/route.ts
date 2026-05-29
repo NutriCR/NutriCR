@@ -2,21 +2,20 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requirePaciente } from '@/lib/supabase/auth-helpers';
 
-interface ProductoInput {
-  nombre:   string;
-  cantidad: number;
-  unidad:   string;
-}
-
 // ─── POST /api/despensa ───────────────────────────────────────────────────────
-// Guarda los productos escaneados en el inventario del paciente autenticado.
+// Acepta dos formatos:
+//
+//  A) Escaneo de tiquete (batch):
+//     { productos: [{ nombre, cantidad, unidad }] }
+//
+//  B) Agregado manual (single):
+//     { nombre, cantidad, unidad, categoria, fecha_vencimiento? }
 
 export async function POST(request: Request) {
   try {
     const auth = await requirePaciente();
     if (!auth.ok) return auth.response;
 
-    // El inventario se almacena bajo el nutriologo_id del paciente
     const nutriologoId = auth.data.nutriologoId;
     if (!nutriologoId) {
       return NextResponse.json(
@@ -26,28 +25,59 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { productos } = body as { productos?: ProductoInput[] };
 
-    if (!Array.isArray(productos) || productos.length === 0) {
-      return NextResponse.json(
-        { error: 'Se requiere un arreglo de productos no vacío' },
-        { status: 400 },
-      );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let rows: any[];
+
+    if (Array.isArray(body.productos)) {
+      // ── Formato A: batch desde el escáner ──────────────────────────────────
+      if (body.productos.length === 0) {
+        return NextResponse.json(
+          { error: 'Se requiere un arreglo de productos no vacío' },
+          { status: 400 },
+        );
+      }
+      rows = (body.productos as { nombre: string; cantidad: number; unidad: string }[]).map((p) => ({
+        nutriologo_id: nutriologoId,
+        paciente_id:   auth.data.pacienteId,
+        nombre:        p.nombre,
+        unidad_medida: p.unidad,
+        stock:         p.cantidad,
+        categoria:     'tiquete-escaneado',
+      }));
+
+    } else {
+      // ── Formato B: producto manual único ──────────────────────────────────
+      const { nombre, cantidad, unidad, categoria, fecha_vencimiento } = body as {
+        nombre:             string;
+        cantidad:           number;
+        unidad:             string;
+        categoria:          string;
+        fecha_vencimiento?: string | null;
+      };
+
+      if (!nombre?.trim() || !cantidad || !unidad) {
+        return NextResponse.json(
+          { error: 'nombre, cantidad y unidad son requeridos' },
+          { status: 400 },
+        );
+      }
+
+      rows = [{
+        nutriologo_id:     nutriologoId,
+        paciente_id:       auth.data.pacienteId,
+        nombre:            nombre.trim(),
+        unidad_medida:     unidad,
+        stock:             Number(cantidad),
+        categoria:         categoria ?? 'Otros',
+        fecha_vencimiento: fecha_vencimiento || null,
+      }];
     }
-
-    const rows = productos.map((p) => ({
-      nutriologo_id: nutriologoId,
-      paciente_id:   auth.data.pacienteId,
-      nombre:        p.nombre,
-      unidad_medida: p.unidad,
-      stock:         p.cantidad,
-      categoria:     'tiquete-escaneado',
-    }));
 
     const { data, error } = await createAdminClient()
       .from('inventario')
       .insert(rows)
-      .select('id, nombre, stock, unidad_medida');
+      .select('id, nombre, stock, unidad_medida, categoria, fecha_vencimiento, created_at');
 
     if (error) {
       console.error('[despensa] insert inventario:', error);
@@ -66,6 +96,7 @@ export async function POST(request: Request) {
 }
 
 // ─── GET /api/despensa ────────────────────────────────────────────────────────
+// Devuelve todos los productos del paciente (escaneados + manuales).
 
 export async function GET() {
   try {
@@ -85,7 +116,6 @@ export async function GET() {
         'fecha_vencimiento, created_at',
       )
       .eq('paciente_id', auth.data.pacienteId)
-      .eq('categoria', 'tiquete-escaneado')
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -13,6 +13,7 @@ interface Producto {
   nombre: string;
   stock: number;
   unidad_medida: string | null;
+  categoria: string | null;
   calorias_por_100g: number | null;
   proteinas_por_100g: number | null;
   carbohidratos_por_100g: number | null;
@@ -21,9 +22,49 @@ interface Producto {
   created_at: string;
 }
 
+interface FormState {
+  nombre:            string;
+  cantidad:          string;
+  unidad:            string;
+  categoria:         string;
+  fecha_vencimiento: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const UNIDADES = ['gramos', 'kg', 'unidades', 'litros', 'ml', 'tazas'] as const;
+
+const CATEGORIAS = [
+  'Proteínas',
+  'Carbohidratos',
+  'Verduras',
+  'Frutas',
+  'Lácteos',
+  'Grasas',
+  'Otros',
+] as const;
+
+const CATEGORIA_EMOJI: Record<string, string> = {
+  'Proteínas':     '🥩',
+  'Carbohidratos': '🌾',
+  'Verduras':      '🥦',
+  'Frutas':        '🍎',
+  'Lácteos':       '🥛',
+  'Grasas':        '🥑',
+  'Otros':         '🛒',
+  'tiquete-escaneado': '🛒',
+};
+
+const FORM_INICIAL: FormState = {
+  nombre:            '',
+  cantidad:          '',
+  unidad:            'gramos',
+  categoria:         'Otros',
+  fecha_vencimiento: '',
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Días restantes hasta la fecha de vencimiento (negativo = ya venció). */
 function diasHastaVencer(fecha: string): number {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -31,11 +72,15 @@ function diasHastaVencer(fecha: string): number {
   return Math.ceil((vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/** Devuelve hoy en formato YYYY-MM-DD para el min del date picker. */
+function hoyISO(): string {
+  return new Date().toLocaleDateString('en-CA');
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function BadgeVencimiento({ fecha }: { fecha: string }) {
   const dias = diasHastaVencer(fecha);
-
   if (dias < 0) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
@@ -61,18 +106,321 @@ function BadgeVencimiento({ fecha }: { fecha: string }) {
 }
 
 function SkeletonCard() {
+  return <div className="bg-slate-100 rounded-2xl h-20 animate-pulse" />;
+}
+
+// ─── Modal: Agregar producto ──────────────────────────────────────────────────
+
+interface ModalAgregarProps {
+  open:       boolean;
+  onClose:    () => void;
+  onGuardado: (producto: Producto) => void;
+}
+
+function ModalAgregar({ open, onClose, onGuardado }: ModalAgregarProps) {
+  const [form,      setForm]      = useState<FormState>(FORM_INICIAL);
+  const [guardando, setGuardando] = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const inputNombreRef            = useRef<HTMLInputElement>(null);
+
+  // Resetear el form y enfocar el primer campo al abrir
+  useEffect(() => {
+    if (open) {
+      setForm(FORM_INICIAL);
+      setError(null);
+      // Pequeño delay para que la animación de entrada no interfiera con el foco
+      const t = setTimeout(() => inputNombreRef.current?.focus(), 120);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  // Prevenir scroll del body mientras el modal está abierto
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setError(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    // Validación cliente
+    if (!form.nombre.trim()) {
+      setError('El nombre del producto es requerido.');
+      inputNombreRef.current?.focus();
+      return;
+    }
+    const cantidad = parseFloat(form.cantidad);
+    if (!form.cantidad || isNaN(cantidad) || cantidad <= 0) {
+      setError('Ingresá una cantidad válida mayor a cero.');
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      const res = await fetch('/api/despensa', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          nombre:            form.nombre.trim(),
+          cantidad,
+          unidad:            form.unidad,
+          categoria:         form.categoria,
+          fecha_vencimiento: form.fecha_vencimiento || null,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Error al guardar');
+
+      // El endpoint devuelve { data: [producto] }
+      const nuevo: Producto = json.data?.[0];
+      if (nuevo) onGuardado(nuevo);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
-    <div className="bg-slate-100 rounded-2xl h-20 animate-pulse" />
+    <>
+      {/* ── Overlay ── */}
+      <div
+        onClick={onClose}
+        aria-hidden
+        className={cn(
+          'fixed inset-0 z-40 bg-black/40 transition-opacity duration-300',
+          open ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+      />
+
+      {/* ── Bottom sheet ── */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Agregar producto a despensa"
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-50',
+          'bg-white rounded-t-3xl shadow-2xl',
+          'transition-transform duration-300 ease-out',
+          open ? 'translate-y-0' : 'translate-y-full',
+        )}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-slate-200" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-800">Agregar producto</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:scale-90 transition-all"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Form — scroll interno para pantallas pequeñas */}
+        <form
+          onSubmit={handleSubmit}
+          className="overflow-y-auto px-5 pt-4 pb-8 space-y-4"
+          style={{ maxHeight: 'calc(100dvh - 140px)' }}
+        >
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+              <span className="text-red-400 flex-shrink-0 mt-0.5">⚠️</span>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* ── Nombre ── */}
+          <div className="space-y-1.5">
+            <label htmlFor="nombre" className="block text-sm font-semibold text-slate-700">
+              Nombre del producto <span className="text-red-400">*</span>
+            </label>
+            <input
+              ref={inputNombreRef}
+              id="nombre"
+              name="nombre"
+              type="text"
+              value={form.nombre}
+              onChange={handleChange}
+              placeholder="ej. Pechuga de pollo"
+              autoComplete="off"
+              className={cn(
+                'w-full rounded-xl border px-4 py-3 text-base text-slate-800',
+                'placeholder:text-slate-300',
+                'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent',
+                'transition-shadow duration-150',
+                'border-slate-200 bg-white',
+              )}
+            />
+          </div>
+
+          {/* ── Cantidad + Unidad en la misma fila ── */}
+          <div className="grid grid-cols-[1fr_140px] gap-3">
+
+            <div className="space-y-1.5">
+              <label htmlFor="cantidad" className="block text-sm font-semibold text-slate-700">
+                Cantidad <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="cantidad"
+                name="cantidad"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                value={form.cantidad}
+                onChange={handleChange}
+                placeholder="0"
+                className={cn(
+                  'w-full rounded-xl border px-4 py-3 text-base text-slate-800',
+                  'placeholder:text-slate-300',
+                  'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent',
+                  'transition-shadow duration-150',
+                  'border-slate-200 bg-white',
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="unidad" className="block text-sm font-semibold text-slate-700">
+                Unidad
+              </label>
+              <select
+                id="unidad"
+                name="unidad"
+                value={form.unidad}
+                onChange={handleChange}
+                className={cn(
+                  'w-full rounded-xl border px-3 py-3 text-base text-slate-800',
+                  'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent',
+                  'transition-shadow duration-150',
+                  'border-slate-200 bg-white',
+                  'appearance-none',
+                )}
+              >
+                {UNIDADES.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* ── Categoría ── */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-slate-700">
+              Categoría
+            </label>
+            {/* Pill selector — más fácil de tocar en móvil que un <select> */}
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIAS.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, categoria: cat }))}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-sm font-medium border transition-all duration-150 active:scale-95',
+                    form.categoria === cat
+                      ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300',
+                  )}
+                >
+                  {CATEGORIA_EMOJI[cat]} {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Fecha de vencimiento ── */}
+          <div className="space-y-1.5">
+            <label htmlFor="fecha_vencimiento" className="block text-sm font-semibold text-slate-700">
+              Fecha de vencimiento{' '}
+              <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+            </label>
+            <input
+              id="fecha_vencimiento"
+              name="fecha_vencimiento"
+              type="date"
+              min={hoyISO()}
+              value={form.fecha_vencimiento}
+              onChange={handleChange}
+              className={cn(
+                'w-full rounded-xl border px-4 py-3 text-base text-slate-800',
+                'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent',
+                'transition-shadow duration-150',
+                'border-slate-200 bg-white',
+                !form.fecha_vencimiento && 'text-slate-300',
+              )}
+            />
+          </div>
+
+          {/* ── Botón submit ── */}
+          <button
+            type="submit"
+            disabled={guardando}
+            className={cn(
+              'w-full rounded-2xl py-4 text-base font-bold text-white',
+              'bg-brand-600 hover:bg-brand-700 active:scale-[0.98]',
+              'transition-all duration-150 shadow-md',
+              'flex items-center justify-center gap-2',
+              guardando && 'opacity-70 pointer-events-none',
+            )}
+          >
+            {guardando ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Guardando…
+              </>
+            ) : (
+              '✓ Agregar a despensa'
+            )}
+          </button>
+
+        </form>
+      </div>
+    </>
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DespensaPage() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
+  const [productos,  setProductos]  = useState<Producto[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [modalOpen,  setModalOpen]  = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
@@ -91,9 +439,14 @@ export default function DespensaPage() {
     }
   }, []);
 
-  useEffect(() => {
-    cargarDespensa();
-  }, [cargarDespensa]);
+  useEffect(() => { cargarDespensa(); }, [cargarDespensa]);
+
+  // ── Agregar producto (callback desde el modal) ─────────────────────────────
+
+  const handleProductoGuardado = useCallback((nuevo: Producto) => {
+    // Agrega el nuevo producto al inicio de la lista sin recargar
+    setProductos((prev) => [nuevo, ...prev]);
+  }, []);
 
   // ── Eliminar ───────────────────────────────────────────────────────────────
 
@@ -106,7 +459,6 @@ export default function DespensaPage() {
         const json = await res.json();
         throw new Error(json.error ?? 'Error al eliminar');
       }
-      // Actualización optimista: quita el ítem de la lista inmediatamente
       setProductos((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar');
@@ -135,7 +487,6 @@ export default function DespensaPage() {
           </p>
         </div>
 
-        {/* Badge de alertas */}
         {proxAVencer > 0 && (
           <span className="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full">
             ⏰ {proxAVencer} por vencer
@@ -176,13 +527,22 @@ export default function DespensaPage() {
           </div>
           <div>
             <p className="font-semibold text-slate-700 text-lg">Tu despensa está vacía</p>
-            <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
-              Escanea un tiquete de supermercado para agregar tus productos automáticamente
+            <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto leading-relaxed">
+              Usá el botón <strong className="text-slate-600">+</strong> para agregar productos
+              manualmente o escaneá un tiquete del supermercado.
             </p>
           </div>
-          <Link href="/paciente/escanear">
-            <Button size="lg">📷 Escanear tiquete</Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-2 bg-brand-600 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:bg-brand-700 active:scale-95 transition-all"
+            >
+              ✏️ Agregar manualmente
+            </button>
+            <Link href="/paciente/escanear">
+              <Button variant="secondary" size="lg">📷 Escanear tiquete</Button>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -191,12 +551,13 @@ export default function DespensaPage() {
         <div className="space-y-3">
           {productos.map((p) => {
             const tieneMacros =
-              p.calorias_por_100g       !== null ||
-              p.proteinas_por_100g      !== null ||
-              p.carbohidratos_por_100g  !== null ||
-              p.grasas_por_100g         !== null;
+              p.calorias_por_100g      !== null ||
+              p.proteinas_por_100g     !== null ||
+              p.carbohidratos_por_100g !== null ||
+              p.grasas_por_100g        !== null;
 
             const estaEliminando = eliminando === p.id;
+            const emoji = CATEGORIA_EMOJI[p.categoria ?? ''] ?? '🛒';
 
             return (
               <Card
@@ -208,15 +569,15 @@ export default function DespensaPage() {
               >
                 <div className="flex items-start gap-3">
 
-                  {/* Icono */}
+                  {/* Icono según categoría */}
                   <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-xl flex-shrink-0 mt-0.5">
-                    🛒
+                    {emoji}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
 
-                    {/* Nombre + badge vencimiento */}
+                    {/* Nombre + badge */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-slate-800 capitalize">
                         {p.nombre.toLowerCase()}
@@ -226,9 +587,12 @@ export default function DespensaPage() {
                       )}
                     </div>
 
-                    {/* Cantidad */}
+                    {/* Cantidad + categoría */}
                     <p className="text-sm text-slate-500 mt-0.5">
                       {p.stock} {p.unidad_medida ?? 'und'}
+                      {p.categoria && p.categoria !== 'tiquete-escaneado' && (
+                        <span className="ml-2 text-xs text-slate-400">· {p.categoria}</span>
+                      )}
                     </p>
 
                     {/* Macros — solo si existen */}
@@ -237,36 +601,28 @@ export default function DespensaPage() {
                         {p.calorias_por_100g !== null && (
                           <span className="text-xs text-slate-500">
                             🔥{' '}
-                            <span className="font-medium text-slate-700">
-                              {p.calorias_por_100g}
-                            </span>{' '}
+                            <span className="font-medium text-slate-700">{p.calorias_por_100g}</span>{' '}
                             kcal
                           </span>
                         )}
                         {p.proteinas_por_100g !== null && (
                           <span className="text-xs text-slate-500">
                             💪{' '}
-                            <span className="font-medium text-blue-600">
-                              {p.proteinas_por_100g}g
-                            </span>{' '}
+                            <span className="font-medium text-blue-600">{p.proteinas_por_100g}g</span>{' '}
                             prot
                           </span>
                         )}
                         {p.carbohidratos_por_100g !== null && (
                           <span className="text-xs text-slate-500">
                             🌾{' '}
-                            <span className="font-medium text-amber-600">
-                              {p.carbohidratos_por_100g}g
-                            </span>{' '}
+                            <span className="font-medium text-amber-600">{p.carbohidratos_por_100g}g</span>{' '}
                             carb
                           </span>
                         )}
                         {p.grasas_por_100g !== null && (
                           <span className="text-xs text-slate-500">
                             🥑{' '}
-                            <span className="font-medium text-rose-600">
-                              {p.grasas_por_100g}g
-                            </span>{' '}
+                            <span className="font-medium text-rose-600">{p.grasas_por_100g}g</span>{' '}
                             gras
                           </span>
                         )}
@@ -294,10 +650,10 @@ export default function DespensaPage() {
         </div>
       )}
 
-      {/* ── FAB "+" ── */}
+      {/* ── FAB "+" → abre modal ── */}
       {!loading && (
-        <Link
-          href="/paciente/escanear"
+        <button
+          onClick={() => setModalOpen(true)}
           className={cn(
             'fixed bottom-24 right-4 w-14 h-14 z-10',
             'bg-brand-600 hover:bg-brand-700 active:scale-95',
@@ -305,11 +661,19 @@ export default function DespensaPage() {
             'flex items-center justify-center text-3xl font-light',
             'transition-all duration-150',
           )}
-          aria-label="Agregar productos escaneando un tiquete"
+          aria-label="Agregar producto a la despensa"
         >
           +
-        </Link>
+        </button>
       )}
+
+      {/* ── Modal ── */}
+      <ModalAgregar
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onGuardado={handleProductoGuardado}
+      />
+
     </div>
   );
 }
