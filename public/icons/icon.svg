@@ -1,78 +1,67 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <clipPath id="round">
-      <rect width="512" height="512" rx="115" ry="115"/>
-    </clipPath>
-  </defs>
-
-  <!-- Fondo verde oscuro -->
-  <rect width="512" height="512" rx="115" ry="115" fill="#1B5E20"/>
-
-  <!-- Sutil degradado de profundidad en el fondo -->
-  <rect width="512" height="512" rx="115" ry="115"
-        fill="url(#bgGrad)" opacity="0.35"/>
-  <defs>
     <radialGradient id="bgGrad" cx="40%" cy="30%" r="70%">
       <stop offset="0%"   stop-color="#2E7D32"/>
       <stop offset="100%" stop-color="#1B5E20"/>
     </radialGradient>
   </defs>
 
-  <!-- Círculo exterior (aro) -->
-  <circle cx="256" cy="256" r="170"
+  <!-- Fondo verde oscuro con leve degradado -->
+  <rect width="512" height="512" rx="115" ry="115" fill="url(#bgGrad)"/>
+
+  <!--
+    ─────────────────────────────────────────────────────────────
+    Zona segura con 20 % de padding: x/y 102 → 410 (308 × 308 px)
+    Aro: r=142 → borde exterior en 256±142 = 114…398 ✓
+    ─────────────────────────────────────────────────────────────
+  -->
+
+  <!-- Aro circular -->
+  <circle cx="256" cy="256" r="142"
           fill="none"
           stroke="#76C442"
-          stroke-width="14"
-          stroke-linecap="round"/>
+          stroke-width="22"/>
 
-  <!-- ══════════════════════════════════════
-       TENEDOR  (parte superior derecha)
-       Mango vertical + 3 dientes arriba
-  ══════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════
+       TENEDOR  —  cuadrante superior derecho
+       stroke-width=22 para legibilidad a 72 px
+  ══════════════════════════════════════════════ -->
   <g stroke="#76C442" stroke-linecap="round" stroke-linejoin="round"
-     fill="none" stroke-width="13">
-
-    <!-- Mango del tenedor -->
-    <line x1="290" y1="190" x2="290" y2="330"/>
+     fill="none" stroke-width="22">
 
     <!-- Diente izquierdo -->
-    <line x1="272" y1="145" x2="272" y2="210"/>
+    <line x1="277" y1="152" x2="277" y2="220"/>
     <!-- Diente central -->
-    <line x1="290" y1="140" x2="290" y2="210"/>
+    <line x1="297" y1="146" x2="297" y2="220"/>
     <!-- Diente derecho -->
-    <line x1="308" y1="145" x2="308" y2="210"/>
+    <line x1="317" y1="152" x2="317" y2="220"/>
 
-    <!-- Puente que une los dientes -->
-    <path d="M272,210 Q272,230 290,232 Q308,230 308,210" fill="none"/>
+    <!-- Puente que une los dientes con el mango -->
+    <path d="M277,220 Q277,244 297,246 Q317,244 317,220"/>
+
+    <!-- Mango -->
+    <line x1="297" y1="246" x2="297" y2="328"/>
   </g>
 
-  <!-- ══════════════════════════════════════
-       HOJA  (parte inferior, centrada)
-       Forma de hoja con nervio central
-  ══════════════════════════════════════ -->
-  <g stroke="#76C442" stroke-linecap="round" stroke-linejoin="round"
-     fill="none" stroke-width="13">
+  <!-- ══════════════════════════════════════════════
+       HOJA  —  mitad inferior, centrada
+       Rellena al 30 % para legibilidad en tamaños pequeños
+  ══════════════════════════════════════════════ -->
 
-    <!-- Silueta de la hoja: arranca en tallo bajo, sube y se cierra en punta alta -->
-    <path d="
-      M 200,360
-      C 200,360 185,300 205,268
-      C 220,242 248,232 256,228
-      C 264,232 292,242 307,268
-      C 327,300 312,360 312,360
-      C 284,368 228,368 200,360
-      Z
-    "/>
+  <!-- Silueta de la hoja (relleno sutil) -->
+  <path d="M 208,364
+           C 184,302 202,256 256,238
+           C 310,256 328,302 304,364
+           C 276,375 236,375 208,364 Z"
+        fill="#76C442" fill-opacity="0.30"
+        stroke="#76C442" stroke-width="22"
+        stroke-linejoin="round"/>
 
-    <!-- Nervio central de la hoja -->
-    <line x1="256" y1="360" x2="256" y2="232"/>
+  <!-- Nervio central -->
+  <line x1="256" y1="238" x2="256" y2="364"
+        stroke="#76C442" stroke-width="16" stroke-linecap="round"/>
 
-    <!-- Nervio izquierdo -->
-    <line x1="256" y1="295" x2="218" y2="318"/>
-    <!-- Nervio derecho -->
-    <line x1="256" y1="295" x2="294" y2="318"/>
-
-    <!-- Tallo -->
-    <line x1="256" y1="360" x2="256" y2="388"/>
-  </g>
+  <!-- Tallo -->
+  <line x1="256" y1="364" x2="256" y2="393"
+        stroke="#76C442" stroke-width="22" stroke-linecap="round"/>
 </svg>

@@ -36,6 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Reemplazo del deprecated apple-mobile-web-app-capable */}
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Apple touch icon explícito — Next.js metadata no siempre es suficiente en iOS */}
+        <link rel="apple-touch-icon" href="/icons/icon-512x512.png" />
       </head>
       <body className="antialiased font-sans">
         {children}
