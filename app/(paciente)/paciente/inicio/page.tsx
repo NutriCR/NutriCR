@@ -158,7 +158,7 @@ function calcStreak(diarioFechasSet: Set<string>, today: Date): number {
   return streak;
 }
 
-/** Adherencia 0-100 con la fórmula 80/10/10.
+/** Seguimiento 0-100 con la fórmula 80/10/10.
  *  `diasActivos` ajusta el denominador de fotos al período real del paciente (1-7). */
 function calcAdherenciaPct(
   fotosUnicos:  number,
@@ -371,7 +371,7 @@ export default function InicioPage() {
   const hasChart = chartData.length > 0;
   const { unit, color } = METRICA[metrica];
 
-  // ── Adherencia semanal ──────────────────────────────────────────────────────
+  // ── Seguimiento semanal ──────────────────────────────────────────────────────
   const today    = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => toDateKey(today), [today]);
 
@@ -721,13 +721,13 @@ export default function InicioPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          ADHERENCIA SEMANAL
+          SEGUIMIENTO SEMANAL
       ══════════════════════════════════════════════════════════════════════ */}
       <Card className="p-4 space-y-3">
 
         {/* Header: título + score */}
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-700 text-sm">Adherencia semanal</h2>
+          <h2 className="font-semibold text-slate-700 text-sm">Seguimiento semanal</h2>
           {!loading && (
             <span
               className={`text-xs font-bold px-2 py-0.5 rounded-full ${

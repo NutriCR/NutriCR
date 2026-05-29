@@ -433,7 +433,7 @@ export default function DashboardPage() {
             />
             <StatCard
               icon="📊"
-              label="Adherencia promedio"
+              label="Seguimiento promedio"
               value={`${data.stats.adherenciaPromedio}%`}
               sub="últimos 7 días"
               accent={
@@ -489,7 +489,7 @@ export default function DashboardPage() {
 
         {/* Encabezados de tabla — solo desktop */}
         <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_104px_92px] gap-4 px-5 py-2.5 bg-slate-50 border-b border-slate-100">
-          {['Paciente', 'Objetivo', 'Adherencia semanal', 'Estado', 'Acción'].map((h) => (
+          {['Paciente', 'Objetivo', 'Seguimiento semanal', 'Estado', 'Acción'].map((h) => (
             <span key={h} className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
               {h}
             </span>
@@ -650,7 +650,7 @@ export default function DashboardPage() {
                       }
                     </div>
 
-                    {/* Adherencia: % + tiempo + barra */}
+                    {/* Seguimiento: % + tiempo + barra */}
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <span className="text-xs font-semibold text-slate-700 tabular-nums">

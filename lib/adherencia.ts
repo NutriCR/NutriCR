@@ -1,13 +1,13 @@
-// ─── Adherencia semanal — fórmula compartida ──────────────────────────────────
+// ─── Seguimiento semanal — fórmula compartida ──────────────────────────────────
 //
 //  80 % → días únicos con registro en diario_comidas (meta: 7 días/semana)
 //  10 % → recetas generadas en la semana              (meta: ≥ 3)
 //  10 % → escaneos de tiquete en la semana            (meta: ≥ 1)
 //
 // Estado cualitativo
-//   'Al día'  → adherencia ≥ 70
-//   'Revisar' → 40 ≤ adherencia < 70
-//   'Urgente' → adherencia < 40  O  sin foto en los últimos 3 días
+//   'Al día'  → seguimiento ≥ 70
+//   'Revisar' → 40 ≤ seguimiento < 70
+//   'Urgente' → seguimiento < 40  O  sin foto en los últimos 3 días
 
 export interface AdherenciaInput {
   fotosUnicos:   number; // días únicos con entradas en diario_comidas (ventana activa)

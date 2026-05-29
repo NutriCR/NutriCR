@@ -19,7 +19,7 @@ function getTipoComida(): 'desayuno' | 'almuerzo' | 'cena' | 'merienda' {
 //   - plan nutricional activo
 //   - receta sugerida según la hora del día
 //   - notificaciones no leídas (máx 2, para "Notas del nutricionista")
-//   - fechas de entradas de diario de los últimos 30 días (para adherencia semanal)
+//   - fechas de entradas de diario de los últimos 30 días (para seguimiento semanal)
 //   - nombre del paciente
 //   - tipoComida calculado en servidor
 
@@ -84,7 +84,7 @@ export async function GET() {
       .limit(2),
 
     // Fechas de entradas de diario de los últimos 30 días (solo created_at)
-    // El cliente convierte a fecha local para los puntos de adherencia
+    // El cliente convierte a fecha local para los puntos de seguimiento
     admin
       .from('diario_comidas')
       .select('created_at')
@@ -99,7 +99,7 @@ export async function GET() {
       .eq('id', userId)
       .maybeSingle(),
 
-    // Recetas generadas esta semana (para cálculo de adherencia en pantalla)
+    // Recetas generadas esta semana (para cálculo de seguimiento en pantalla)
     admin
       .from('recetas_generadas')
       .select('id', { count: 'exact', head: true })
@@ -145,7 +145,7 @@ export async function GET() {
       nombre:   usuarioRes.data?.nombre   ?? 'Paciente',
       apellido: usuarioRes.data?.apellido ?? null,
     },
-    // Componentes de adherencia para mostrar desglose en pantalla de inicio
+    // Componentes de seguimiento para mostrar desglose en pantalla de inicio
     recetasSemana:      recetasSemanaRes.count             ?? 0,
     escaneosSemana:     escaneosRaw.count                  ?? 0,
     // Fecha de registro — el cliente la usa para calcular diasActivos

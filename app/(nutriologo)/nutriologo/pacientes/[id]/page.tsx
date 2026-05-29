@@ -999,7 +999,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
             </div>
           </div>
 
-          {/* Badge de estado + adherencia */}
+          {/* Badge de estado + seguimiento */}
           <div className="flex flex-col items-end gap-2">
             <span className={cn(
               'inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full',
@@ -1008,7 +1008,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
               <span className={cn('w-2 h-2 rounded-full', estado.dot)} />
               {estado.label}
             </span>
-            <p className="text-xs text-slate-400">Adherencia: <strong className="text-slate-700">{adherencia}%</strong> esta semana</p>
+            <p className="text-xs text-slate-400">Seguimiento: <strong className="text-slate-700">{adherencia}%</strong> esta semana</p>
           </div>
         </div>
       </div>

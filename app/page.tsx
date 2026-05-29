@@ -420,7 +420,7 @@ export default function HomePage() {
               style={{ '--reveal-delay': '220ms' } as React.CSSProperties}
               className="text-green-100/80 text-lg leading-relaxed mb-10 max-w-2xl mx-auto"
             >
-              Dashboard completo con todos tus pacientes, adherencia en tiempo real
+              Dashboard completo con todos tus pacientes, seguimiento en tiempo real
               y comunicación directa desde una sola plataforma.
             </p>
 

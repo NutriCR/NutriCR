@@ -191,7 +191,7 @@ export async function GET() {
       };
     });
 
-    // Ordenar: Urgente primero, luego por adherencia ascendente
+    // Ordenar: Urgente primero, luego por seguimiento ascendente
     pacientes.sort((a, b) => {
       const order = { Urgente: 0, Revisar: 1, 'Al día': 2 } as Record<string, number>;
       const od = (order[a.estado] ?? 1) - (order[b.estado] ?? 1);
