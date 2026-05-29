@@ -82,12 +82,17 @@ export async function GET(
   const recetasCount  = (recetasRes.data  ?? []).length;
   const escaneosCount = (escaneosRaw.data ?? []).length;
 
+  // Días activos desde el registro (mín. 1, máx. 7) — denominador real de fotos
+  const daysSinceReg = Math.floor((Date.now() - new Date(paciente.created_at).getTime()) / 86_400_000);
+  const diasActivos  = Math.min(7, daysSinceReg + 1);
+
   // ¿Tiene alguna foto en los últimos 3 días?
-  const sinFotoReciente = !(fotosRes.data ?? []).some(
+  // Pacientes registrados hace menos de 3 días no se marcan como "sin foto reciente".
+  const sinFotoReciente = daysSinceReg >= 3 && !(fotosRes.data ?? []).some(
     (f) => (f.created_at as string) >= hace3,
   );
 
-  const adherencia = calcAdherencia({ fotosUnicos, recetasCount, escaneosCount });
+  const adherencia = calcAdherencia({ fotosUnicos, recetasCount, escaneosCount, diasActivos });
   const estado     = calcEstado(adherencia, sinFotoReciente);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
