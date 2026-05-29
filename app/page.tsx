@@ -77,22 +77,22 @@ function IconCamera({ className }: { className?: string }) {
   );
 }
 
-function IconChef({ className }: { className?: string }) {
+function IconChart({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 0111.18 0A4 4 0 0118 13.87V21H6z" />
-      <line x1="6" y1="17" x2="18" y2="17" />
-      <line x1="6" y1="21" x2="18" y2="21" />
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4"  />
+      <line x1="6"  y1="20" x2="6"  y2="14" />
+      <line x1="2"  y1="20" x2="22" y2="20" />
     </svg>
   );
 }
 
-function IconStethoscope({ className }: { className?: string }) {
+function IconTrendingUp({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6 6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3" />
-      <path d="M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4" />
-      <circle cx="20" cy="10" r="2" />
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
     </svg>
   );
 }
@@ -241,10 +241,10 @@ export default function HomePage() {
               style={{ '--reveal-delay': '110ms', textShadow: '0 2px 8px rgba(0,0,0,0.4)' } as React.CSSProperties}
               className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight"
             >
-              Tu nutricionista, tu despensa
+              Tu nutricionista contigo{' '}
+              <span className="text-green-300">todos los días</span>
               <br className="hidden sm:block" />
-              {' '}y tus recetas{' '}
-              <span className="text-green-300">en un solo lugar</span>
+              {' '}no solo en la cita
             </h1>
 
             {/* Subtítulo */}
@@ -253,7 +253,7 @@ export default function HomePage() {
               style={{ '--reveal-delay': '240ms' } as React.CSSProperties}
               className="mt-6 text-lg sm:text-xl text-white/85 max-w-xl mx-auto leading-relaxed"
             >
-              Tecnología al servicio de tu salud.
+              Seguimiento real, resultados reales.
               Diseñado para Costa Rica.
             </p>
 
@@ -341,30 +341,30 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {[
                 {
-                  Icon:  IconCamera,
+                  Icon:  IconChart,
                   ring:  'ring-amber-100',
                   bg:    'bg-amber-50',
                   text:  'text-amber-600',
-                  title: 'Escaneá tu tiquete',
-                  desc:  'Fotografiá tu compra del supermercado y registramos tu despensa automáticamente. Nada de ingresar productos a mano.',
+                  title: 'Seguimiento diario',
+                  desc:  'Tu nutricionista ve lo que comés cada día y ajusta tu plan en tiempo real.',
                   delay: '0ms',
                 },
                 {
-                  Icon:  IconChef,
+                  Icon:  IconCamera,
                   ring:  'ring-brand-100',
                   bg:    'bg-brand-50',
                   text:  'text-brand-600',
-                  title: 'Recetas personalizadas',
-                  desc:  'La IA genera recetas adaptadas a tu plan nutricional, tus alergias y los ingredientes que ya tenés disponibles.',
+                  title: 'Fotos de tus comidas',
+                  desc:  'Fotografiá lo que comés. Tu nutricionista lo revisa y te da retroalimentación.',
                   delay: '130ms',
                 },
                 {
-                  Icon:  IconStethoscope,
+                  Icon:  IconTrendingUp,
                   ring:  'ring-violet-100',
                   bg:    'bg-violet-50',
                   text:  'text-violet-600',
-                  title: 'Seguimiento profesional',
-                  desc:  'Tu nutricionista monitorea tu adherencia semanal, evolución InBody y te envía notas directamente a la app.',
+                  title: 'Resultados visibles',
+                  desc:  'Mediciones InBody, progreso semanal y proyección de tus metas en una sola pantalla.',
                   delay: '260ms',
                 },
               ].map((b) => (
@@ -383,6 +383,76 @@ export default function HomePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            PARA NUTRICIONISTAS — fondo verde oscuro
+        ══════════════════════════════════════════════════════════════════ */}
+        <section className="py-24 px-6 bg-[#1a4d2e] relative overflow-hidden">
+          {/* Detalles decorativos de fondo */}
+          <div aria-hidden className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-white/5 pointer-events-none" />
+          <div aria-hidden className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
+          <div aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-white/[0.03] pointer-events-none" />
+
+          <div className="max-w-3xl mx-auto text-center relative z-10">
+            {/* Chip */}
+            <span
+              data-reveal
+              className="inline-block bg-white/10 border border-white/20 text-green-200 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-7"
+            >
+              Para nutricionistas
+            </span>
+
+            <h2
+              data-reveal
+              style={{ '--reveal-delay': '110ms' } as React.CSSProperties}
+              className="text-3xl sm:text-4xl font-black text-white leading-tight mb-5"
+            >
+              Aumentá tu impacto sin{' '}
+              <span className="text-green-300">aumentar tu carga</span>{' '}
+              de trabajo
+            </h2>
+
+            <p
+              data-reveal
+              style={{ '--reveal-delay': '220ms' } as React.CSSProperties}
+              className="text-green-100/80 text-lg leading-relaxed mb-10 max-w-2xl mx-auto"
+            >
+              Dashboard completo con todos tus pacientes, adherencia en tiempo real
+              y comunicación directa desde una sola plataforma.
+            </p>
+
+            {/* Stats visuales */}
+            <div
+              data-reveal
+              style={{ '--reveal-delay': '320ms' } as React.CSSProperties}
+              className="grid grid-cols-3 gap-6 mb-10 max-w-lg mx-auto"
+            >
+              {[
+                { value: '100%',  label: 'Visibilidad diaria' },
+                { value: '3x',    label: 'Más retención'      },
+                { value: '0 min', label: 'De papeleo extra'   },
+              ].map((s) => (
+                <div key={s.label} className="flex flex-col items-center gap-1">
+                  <span className="text-2xl font-black text-white">{s.value}</span>
+                  <span className="text-xs text-green-200/70 leading-tight text-center">{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div
+              data-reveal
+              style={{ '--reveal-delay': '420ms' } as React.CSSProperties}
+            >
+              <Link
+                href="/auth/registro/nutriologo"
+                className="inline-flex items-center justify-center gap-2.5 bg-white text-[#1a4d2e] font-bold py-4 px-10 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-green-50 active:scale-95 transition-all duration-200 text-base"
+              >
+                <span aria-hidden>🩺</span>
+                Registrá tu consultorio
+              </Link>
             </div>
           </div>
         </section>
@@ -425,9 +495,9 @@ export default function HomePage() {
                 <div className="w-[72px] h-[72px] rounded-full bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/30 mb-6 flex-shrink-0">
                   <span className="text-xl font-black">01</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Registrate</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Tu nutricionista crea tu plan</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Pedile el código de invitación a tu nutricionista y creá tu cuenta de paciente en minutos.
+                  Define tus metas, restricciones y objetivos en la plataforma.
                 </p>
               </div>
 
@@ -449,9 +519,9 @@ export default function HomePage() {
                 <div className="w-[72px] h-[72px] rounded-full bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/30 mb-6 flex-shrink-0">
                   <span className="text-xl font-black">02</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Escaneá tu compra</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Vos registrás tu día a día</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Fotografiá el tiquete del supermercado y tu despensa queda registrada automáticamente.
+                  Fotografiá tus comidas, escaneá tu compra del súper, seguí tu progreso.
                 </p>
               </div>
 
@@ -473,9 +543,9 @@ export default function HomePage() {
                 <div className="w-[72px] h-[72px] rounded-full bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/30 mb-6 flex-shrink-0">
                   <span className="text-xl font-black">03</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Recibí tus recetas</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Tu nutricionista te acompaña</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Cada día encontrás recetas adaptadas a tu plan y a lo que tenés disponible en casa.
+                  Revisa tus fotos, ajusta tu plan y te manda correcciones entre citas.
                 </p>
               </div>
 
