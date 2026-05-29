@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Reemplazo del deprecated apple-mobile-web-app-capable */}
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased font-sans">
         {children}
         <ServiceWorkerUpdater />
       </body>
