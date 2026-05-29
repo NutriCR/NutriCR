@@ -315,9 +315,15 @@ export default function DashboardPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  // ── Filtro de búsqueda ─────────────────────────────────────────────────────
+  // ── Pacientes que necesitan atención (Revisar o Urgente) ─────────────────
 
-  const pacientesFiltrados = (data?.pacientes ?? []).filter((p) =>
+  const pacientesNecesitanAtencion = (data?.pacientes ?? []).filter(
+    (p) => p.estado === 'Revisar' || p.estado === 'Urgente',
+  );
+
+  // ── Filtro de búsqueda sobre ese subconjunto ───────────────────────────────
+
+  const pacientesFiltrados = pacientesNecesitanAtencion.filter((p) =>
     `${p.nombre} ${p.apellido ?? ''} ${p.email}`
       .toLowerCase()
       .includes(busqueda.toLowerCase()),
@@ -454,11 +460,11 @@ export default function DashboardPage() {
 
         {/* Barra superior */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-semibold text-slate-800">Mis pacientes</h2>
-            {data && !loading && (
-              <span className="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-0.5 rounded-full">
-                {data.stats.totalPacientes}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="font-semibold text-slate-800">Pacientes que necesitan atención</h2>
+            {data && !loading && pacientesNecesitanAtencion.length > 0 && (
+              <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                {pacientesNecesitanAtencion.length}
               </span>
             )}
             {data?.isMockData && (
@@ -495,26 +501,54 @@ export default function DashboardPage() {
           <div>
             {[1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
           </div>
-        ) : pacientesFiltrados.length === 0 ? (
+
+        ) : (data?.pacientes ?? []).length === 0 ? (
+          /* Sin pacientes vinculados aún */
           <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-            <span className="text-4xl">{busqueda ? '🔍' : '🔗'}</span>
-            <p className="font-medium text-slate-700">
-              {busqueda ? `Sin resultados para "${busqueda}"` : 'Aún no tenés pacientes vinculados'}
+            <span className="text-4xl">🔗</span>
+            <p className="font-medium text-slate-700">Aún no tenés pacientes vinculados</p>
+            <p className="text-sm text-slate-400 max-w-xs">
+              Compartí tu código de invitación con tus pacientes para que se registren y queden vinculados a tu panel.
             </p>
-            {!busqueda && (
-              <>
-                <p className="text-sm text-slate-400 max-w-xs">
-                  Compartí tu código de invitación con tus pacientes para que se registren y queden vinculados a tu panel.
-                </p>
-                <button
-                  onClick={abrirModal}
-                  className="mt-1 flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-                >
-                  <span>🔑</span> Ver mi código de invitación
-                </button>
-              </>
-            )}
+            <button
+              onClick={abrirModal}
+              className="mt-1 flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            >
+              <span>🔑</span> Ver mi código de invitación
+            </button>
           </div>
+
+        ) : pacientesNecesitanAtencion.length === 0 ? (
+          /* Todos los pacientes están al día */
+          <div className="flex flex-col items-center gap-3 py-14 text-center px-6">
+            <span className="text-5xl">🎉</span>
+            <p className="font-semibold text-slate-800 text-lg">
+              ¡Todos tus pacientes están al día esta semana!
+            </p>
+            <p className="text-sm text-slate-400 max-w-xs">
+              Ningún paciente necesita atención especial. Seguís haciendo un gran trabajo.
+            </p>
+            <Link
+              href="/nutriologo/pacientes"
+              className="mt-1 text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors"
+            >
+              Ver lista completa de pacientes →
+            </Link>
+          </div>
+
+        ) : busqueda && pacientesFiltrados.length === 0 ? (
+          /* Búsqueda sin resultados dentro del subconjunto */
+          <div className="flex flex-col items-center gap-3 py-14 text-center px-6">
+            <span className="text-4xl">🔍</span>
+            <p className="font-medium text-slate-700">Sin resultados para &ldquo;{busqueda}&rdquo;</p>
+            <button
+              onClick={() => setBusqueda('')}
+              className="text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors"
+            >
+              Limpiar búsqueda
+            </button>
+          </div>
+
         ) : (
           <div className="divide-y divide-slate-100">
             {pacientesFiltrados.map((p) => {
@@ -645,17 +679,21 @@ export default function DashboardPage() {
         )}
 
         {/* Pie de tabla */}
-        {!loading && pacientesFiltrados.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
+        {!loading && (data?.pacientes ?? []).length > 0 && (
+          <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs text-slate-400">
-              {pacientesFiltrados.length} de {data?.stats.totalPacientes ?? 0} pacientes
-              {busqueda && ` · Filtrando por "${busqueda}"`}
+              {pacientesFiltrados.length > 0
+                ? `${pacientesFiltrados.length} de ${data?.stats.totalPacientes ?? 0} paciente${(data?.stats.totalPacientes ?? 0) !== 1 ? 's' : ''} requieren atención`
+                : `${data?.stats.totalPacientes ?? 0} paciente${(data?.stats.totalPacientes ?? 0) !== 1 ? 's' : ''} en total`
+              }
+              {busqueda && ` · buscando "${busqueda}"`}
             </p>
-            {data?.isMockData && (
-              <p className="text-xs text-amber-500">
-                ⚠️ Mostrando datos de ejemplo — los reales aparecen tras vincular pacientes
-              </p>
-            )}
+            <Link
+              href="/nutriologo/pacientes"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors whitespace-nowrap"
+            >
+              Ver todos →
+            </Link>
           </div>
         )}
       </div>
