@@ -12,7 +12,7 @@ export default function PlanPage() {
         <div className="text-center py-8 text-slate-400">
           <p className="text-4xl mb-3">📋</p>
           <p className="font-medium">Sin plan asignado</p>
-          <p className="text-sm mt-1">Tu nutriólogo aún no ha creado tu plan</p>
+          <p className="text-sm mt-1">Tu nutricionista aún no ha creado tu plan</p>
         </div>
       </Card>
     </div>

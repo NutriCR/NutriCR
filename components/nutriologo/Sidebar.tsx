@@ -57,7 +57,7 @@ export default function Sidebar({ expanded, animated, onToggle }: SidebarProps) 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-brand-700 leading-tight">Nutri Smart CR</p>
-              <p className="text-xs text-slate-400 leading-tight">Panel Nutriólogo</p>
+              <p className="text-xs text-slate-400 leading-tight">Panel Nutricionista</p>
             </div>
             {/* Botón colapsar (←) */}
             <button
@@ -124,7 +124,7 @@ export default function Sidebar({ expanded, animated, onToggle }: SidebarProps) 
           </div>
           {expanded && (
             <div className="flex-1 min-w-0 overflow-hidden">
-              <p className="text-sm font-medium text-slate-700 truncate">Nutriólogo</p>
+              <p className="text-sm font-medium text-slate-700 truncate">Nutricionista</p>
             </div>
           )}
           {expanded && (

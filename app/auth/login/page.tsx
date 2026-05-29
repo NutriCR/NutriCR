@@ -164,7 +164,7 @@ function LoginForm() {
               className="flex flex-col items-center gap-1.5 border border-slate-200 rounded-xl p-4 text-center hover:border-brand-300 hover:bg-brand-50 transition-all"
             >
               <span className="text-2xl">🩺</span>
-              <span className="text-xs font-semibold text-slate-700">Soy Nutriólogo</span>
+              <span className="text-xs font-semibold text-slate-700">Soy Nutricionista</span>
             </Link>
             <Link
               href="/auth/registro/paciente"

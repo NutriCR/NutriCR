@@ -1,7 +1,7 @@
 import NutriShell from '@/components/nutriologo/NutriShell';
 
 /**
- * Layout del panel del nutriólogo.
+ * Layout del panel del nutricionista.
  * Se mantiene como Server Component — la lógica interactiva del sidebar
  * vive en NutriShell (Client Component).
  */

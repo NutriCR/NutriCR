@@ -69,7 +69,7 @@ export default function RegistroPacientePage() {
       return;
     }
     if (!form.codigoNutriologo.trim()) {
-      setError('Necesitas un código de tu nutriólogo para registrarte.');
+      setError('Necesitas un código de tu nutricionista para registrarte.');
       return;
     }
 
@@ -80,7 +80,7 @@ export default function RegistroPacientePage() {
       setCodigoValidado(validacion.valido);
 
       if (!validacion.valido) {
-        setError(validacion.error ?? 'Código inválido, verificá con tu nutriólogo.');
+        setError(validacion.error ?? 'Código inválido, verificá con tu nutricionista.');
         return;
       }
 
@@ -181,7 +181,7 @@ export default function RegistroPacientePage() {
         >
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Paciente</h2>
           <p className="text-slate-400 text-sm mb-6">
-            Necesitas un código de tu nutriólogo para registrarte.
+            Necesitas un código de tu nutricionista para registrarte.
           </p>
 
           {error && (
@@ -270,10 +270,10 @@ export default function RegistroPacientePage() {
               />
             </div>
 
-            {/* Código de nutriólogo */}
+            {/* Código de nutricionista */}
             <div>
               <label className={labelCls}>
-                Código de tu nutriólogo <span className="text-red-400">*</span>
+                Código de tu nutricionista <span className="text-red-400">*</span>
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -301,9 +301,9 @@ export default function RegistroPacientePage() {
                 </button>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Tu nutriólogo te compartirá este código desde su panel.
+                Tu nutricionista te compartirá este código desde su panel.
               </p>
-              {codigoValidado === false && <p className="text-xs text-red-500 mt-1">Código inválido, verificá con tu nutriólogo.</p>}
+              {codigoValidado === false && <p className="text-xs text-red-500 mt-1">Código inválido, verificá con tu nutricionista.</p>}
               {codigoValidado === true  && <p className="text-xs text-green-600 mt-1">✓ Código válido.</p>}
             </div>
 

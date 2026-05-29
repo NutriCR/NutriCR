@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const nutriologoId = auth.data.nutriologoId;
     if (!nutriologoId) {
       return NextResponse.json(
-        { error: 'No tienes un nutriólogo asignado. Verifica tu código de invitación.' },
+        { error: 'No tienes un nutricionista asignado. Verifica tu código de invitación.' },
         { status: 400 },
       );
     }

@@ -13,7 +13,7 @@ const TAG = '[setup-profile]';
  *   B) Email confirmation ON  → signUp devuelve user pero SIN sesión (session: null).
  *      En este caso el cliente pasa `user_id` en el body y lo verificamos vía admin API.
  *
- * Body para nutriólogo:
+ * Body para nutricionista:
  *   { tipo_usuario: 'nutriologo', nombre, apellido?, numero_colegiado?, user_id? }
  *
  * Body para paciente:
@@ -139,12 +139,12 @@ export async function POST(request: Request) {
 
       // ── Paciente: validar código de invitación ─────────────────────────────────
       if (!body.codigo_nutriologo) {
-        console.error(`${TAG} código nutriólogo faltante para paciente`);
-        return NextResponse.json({ error: 'Código de nutriólogo requerido' }, { status: 400 });
+        console.error(`${TAG} código nutricionista faltante para paciente`);
+        return NextResponse.json({ error: 'Código de nutricionista requerido' }, { status: 400 });
       }
 
       const codigoNormalizado = body.codigo_nutriologo.toUpperCase().trim();
-      console.log(`${TAG} buscando nutriólogo con codigo_invitacion=${codigoNormalizado}`);
+      console.log(`${TAG} buscando nutricionista con codigo_invitacion=${codigoNormalizado}`);
 
       const { data: nutriologoRow, error: codigoError } = await admin
         .from('nutriologos')
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       if (codigoError || !nutriologoRow) {
         console.error(`${TAG} código no encontrado | supabaseErr:`, codigoError?.message ?? 'null');
         return NextResponse.json(
-          { error: 'Código inválido, verificá con tu nutriólogo' },
+          { error: 'Código inválido, verificá con tu nutricionista' },
           { status: 400 },
         );
       }

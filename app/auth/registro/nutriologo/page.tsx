@@ -133,7 +133,7 @@ export default function RegistroNutriologoPage() {
           className="w-full max-w-md rounded-2xl shadow-2xl p-8 mb-8"
           style={{ background: 'rgba(255,255,255,0.85)' }}
         >
-          <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Nutriólogo</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Nutricionista</h2>
           <p className="text-slate-400 text-sm mb-6">Crea tu cuenta profesional en Nutri Smart CR.</p>
 
           {error && (
@@ -243,7 +243,7 @@ export default function RegistroNutriologoPage() {
               disabled={loading}
               className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-brand-400 text-white font-semibold py-3 rounded-xl transition-colors text-sm mt-2"
             >
-              {loading ? 'Creando cuenta…' : 'Crear cuenta de nutriólogo'}
+              {loading ? 'Creando cuenta…' : 'Crear cuenta de nutricionista'}
             </button>
           </form>
 

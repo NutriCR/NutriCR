@@ -6,7 +6,7 @@ import { calcAdherencia, calcEstado, toCRDateKey } from '@/lib/adherencia';
 // ─── GET /api/dashboard ───────────────────────────────────────────────────────
 
 export async function GET() {
-  // 1. Verificar sesión de nutriólogo
+  // 1. Verificar sesión de nutricionista
   const auth = await requireNutriologo();
   if (!auth.ok) return auth.response;
   const { nutriologoId } = auth.data;
@@ -14,7 +14,7 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    // 2. Código de invitación del nutriólogo
+    // 2. Código de invitación del nutricionista
     const { data: nutrData } = await supabase
       .from('nutriologos')
       .select('codigo_invitacion')
@@ -23,7 +23,7 @@ export async function GET() {
 
     const codigoInvitacion = nutrData?.codigo_invitacion ?? null;
 
-    // 3. Pacientes del nutriólogo
+    // 3. Pacientes del nutricionista
     const { data: pacientesRaw, error: pacErr } = await supabase
       .from('pacientes')
       .select('id, usuario_id, objetivo, created_at')

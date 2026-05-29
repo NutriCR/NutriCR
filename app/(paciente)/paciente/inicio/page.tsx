@@ -535,7 +535,7 @@ export default function InicioPage() {
               Activa las notificaciones
             </p>
             <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
-              Recibe alertas cuando tu nutriólogo te envíe un mensaje.
+              Recibe alertas cuando tu nutricionista te envíe un mensaje.
             </p>
           </div>
           <div className="flex flex-col gap-1.5 shrink-0">
@@ -605,7 +605,7 @@ export default function InicioPage() {
             <span className="text-3xl mb-2">📊</span>
             <p className="text-sm font-medium text-slate-600">Sin mediciones aún</p>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Tu nutriólogo irá registrando tus datos de InBody aquí
+              Tu nutricionista irá registrando tus datos de InBody aquí
             </p>
           </div>
         ) : (
@@ -850,7 +850,7 @@ export default function InicioPage() {
       </Card>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          NOTAS DEL NUTRIÓLOGO (solo si hay notificaciones no leídas)
+          NOTAS DEL NUTRICIONISTA (solo si hay notificaciones no leídas)
       ══════════════════════════════════════════════════════════════════════ */}
       {!loading && notifVisibles.length > 0 && (
         <Card className="p-4 space-y-3">
@@ -858,7 +858,7 @@ export default function InicioPage() {
           <div className="flex items-center gap-2">
             <span className="text-base leading-none">🔔</span>
             <h2 className="font-semibold text-slate-700 text-sm flex-1">
-              Notas del nutriólogo
+              Notas del nutricionista
             </h2>
             <span className="text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none">
               {notifVisibles.length}

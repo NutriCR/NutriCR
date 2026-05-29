@@ -175,7 +175,7 @@ export default function DiarioPage() {
     <div className="space-y-5 pb-4">
       <div>
         <h2 className="text-lg font-bold text-slate-800">Registro de comidas</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Fotografiá lo que comés para que tu nutriólogo pueda verlo</p>
+        <p className="text-sm text-slate-400 mt-0.5">Fotografiá lo que comés para que tu nutricionista pueda verlo</p>
       </div>
 
       {/* ── Zona de captura ── */}

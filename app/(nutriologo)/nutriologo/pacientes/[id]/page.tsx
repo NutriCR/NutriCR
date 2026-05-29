@@ -1429,7 +1429,7 @@ export default function PacienteDetallePage({ params }: { params: { id: string }
       </SectionCard>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          7. NOTAS DEL NUTRIÓLOGO
+          7. NOTAS DEL NUTRICIONISTA
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard title="Notas para el paciente" icon="📝">
         {/* Nueva nota */}

@@ -25,7 +25,7 @@ export async function GET(
     return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 });
   }
 
-  // Verificar que el paciente pertenece al nutriólogo autenticado
+  // Verificar que el paciente pertenece al nutricionista autenticado
   if (paciente.nutriologo_id !== auth.data.nutriologoId) {
     return NextResponse.json({ error: 'Sin acceso a este paciente' }, { status: 403 });
   }

@@ -85,7 +85,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           subs.map((row: any) =>
             sendPush(row.subscription, {
-              title: 'Mensaje de tu nutriólogo',
+              title: 'Mensaje de tu nutricionista',
               body:  preview,
               icon:  '/icons/icon-192x192.png',
             }),

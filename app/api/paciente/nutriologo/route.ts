@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requirePaciente } from '@/lib/supabase/auth-helpers';
 
 // ─── GET /api/paciente/nutriologo ─────────────────────────────────────────────
-// Devuelve info del nutriólogo vinculado al paciente autenticado.
+// Devuelve info del nutricionista vinculado al paciente autenticado.
 // Respuesta: { nutriologo: { nombre, apellido, codigoInvitacion } | null }
 
 export async function GET() {
@@ -23,7 +23,7 @@ export async function GET() {
     return NextResponse.json({ nutriologo: null });
   }
 
-  // Datos del nutriólogo
+  // Datos del nutricionista
   const { data: nutriologo } = await admin
     .from('nutriologos')
     .select('id, codigo_invitacion, usuario_id')
@@ -34,7 +34,7 @@ export async function GET() {
     return NextResponse.json({ nutriologo: null });
   }
 
-  // Nombre del nutriólogo (está en la tabla usuarios)
+  // Nombre del nutricionista (está en la tabla usuarios)
   const { data: usuario } = await admin
     .from('usuarios')
     .select('nombre, apellido')
@@ -43,7 +43,7 @@ export async function GET() {
 
   return NextResponse.json({
     nutriologo: {
-      nombre:           usuario?.nombre   ?? 'Nutriólogo',
+      nombre:           usuario?.nombre   ?? 'Nutricionista',
       apellido:         usuario?.apellido ?? null,
       codigoInvitacion: nutriologo.codigo_invitacion,
     },
@@ -51,8 +51,8 @@ export async function GET() {
 }
 
 // ─── PATCH /api/paciente/nutriologo ──────────────────────────────────────────
-// Vincula (o cambia) el nutriólogo del paciente autenticado usando un código.
-// Desvincula al nutriólogo anterior automáticamente.
+// Vincula (o cambia) el nutricionista del paciente autenticado usando un código.
+// Desvincula al nutricionista anterior automáticamente.
 // Body: { codigo: "XXXX-XXXX" }
 
 export async function PATCH(request: Request) {
@@ -77,7 +77,7 @@ export async function PATCH(request: Request) {
 
   const admin = createAdminClient();
 
-  // Buscar nutriólogo por código de invitación
+  // Buscar nutricionista por código de invitación
   const { data: nutriologoRow, error: findErr } = await admin
     .from('nutriologos')
     .select('id, codigo_invitacion, usuario_id')
@@ -86,7 +86,7 @@ export async function PATCH(request: Request) {
 
   if (findErr || !nutriologoRow) {
     return NextResponse.json(
-      { error: 'Código inválido. Verificá con tu nutriólogo.' },
+      { error: 'Código inválido. Verificá con tu nutricionista.' },
       { status: 404 },
     );
   }
@@ -102,7 +102,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
-  // Leer nombre del nutriólogo para devolver al cliente
+  // Leer nombre del nutricionista para devolver al cliente
   const { data: usuario } = await admin
     .from('usuarios')
     .select('nombre, apellido')
@@ -111,7 +111,7 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({
     nutriologo: {
-      nombre:           usuario?.nombre   ?? 'Nutriólogo',
+      nombre:           usuario?.nombre   ?? 'Nutricionista',
       apellido:         usuario?.apellido ?? null,
       codigoInvitacion: nutriologoRow.codigo_invitacion,
     },

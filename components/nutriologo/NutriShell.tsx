@@ -8,7 +8,7 @@ import NutriHeader from './Header';
 const STORAGE_KEY = 'nutricr-sidebar-expanded';
 
 /**
- * Shell del panel del nutriólogo.
+ * Shell del panel del nutricionista.
  * Gestiona el estado colapsable del sidebar, la persistencia en localStorage
  * y el backdrop de overlay en pantallas pequeñas (<1280px).
  *

@@ -32,7 +32,7 @@ export default function PerfilPage() {
   const [loading,    setLoading]   = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // ── Nutriólogo vinculado ───────────────────────────────────────────────────
+  // ── Nutricionista vinculado ───────────────────────────────────────────────────
   const [nutriologo,    setNutriologo]    = useState<NutriologoInfo | null | undefined>(undefined); // undefined = cargando
   const [nuevoCodigo,   setNuevoCodigo]   = useState('');
   const [vinculando,    setVinculando]    = useState(false);
@@ -48,14 +48,14 @@ export default function PerfilPage() {
     });
   }, []);
 
-  // ── Cargar nutriólogo vinculado ───────────────────────────────────────────
+  // ── Cargar nutricionista vinculado ───────────────────────────────────────────
   const cargarNutriologo = useCallback(async () => {
     try {
       const res  = await fetch('/api/paciente/nutriologo');
       if (!res.ok) { setNutriologo(null); return; }
       const json = await res.json();
       setNutriologo(json.nutriologo ?? null);
-      // Si no tiene nutriólogo, abrir el formulario automáticamente
+      // Si no tiene nutricionista, abrir el formulario automáticamente
       if (!json.nutriologo) setMostrarForm(true);
     } catch {
       setNutriologo(null);
@@ -64,7 +64,7 @@ export default function PerfilPage() {
 
   useEffect(() => { cargarNutriologo(); }, [cargarNutriologo]);
 
-  // ── Vincular / cambiar nutriólogo ─────────────────────────────────────────
+  // ── Vincular / cambiar nutricionista ─────────────────────────────────────────
   async function handleVincular(e: React.FormEvent) {
     e.preventDefault();
     const codigo = nuevoCodigo.trim();
@@ -160,14 +160,14 @@ export default function PerfilPage() {
       </Card>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          MI NUTRIÓLOGO
+          MI NUTRICIONISTA
       ══════════════════════════════════════════════════════════════════════ */}
       <Card className="p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-slate-700 flex items-center gap-2">
-            <span>👨‍⚕️</span> Mi Nutriólogo
+            <span>👨‍⚕️</span> Mi Nutricionista
           </h2>
-          {/* Botón cambiar — solo visible cuando hay nutriólogo y el form está cerrado */}
+          {/* Botón cambiar — solo visible cuando hay nutricionista y el form está cerrado */}
           {nutriologo && !mostrarForm && (
             <button
               onClick={() => { setMostrarForm(true); setErrorCodigo(null); }}
@@ -187,17 +187,17 @@ export default function PerfilPage() {
           </div>
 
         ) : nutriologo === null ? (
-          /* Sin nutriólogo */
+          /* Sin nutricionista */
           <div className="flex items-start gap-3 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">
             <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
             <div>
-              <p className="text-sm font-semibold text-amber-800">Sin nutriólogo vinculado</p>
-              <p className="text-xs text-amber-600 mt-0.5">Ingresá el código que te dio tu nutriólogo para vincularte.</p>
+              <p className="text-sm font-semibold text-amber-800">Sin nutricionista vinculado</p>
+              <p className="text-xs text-amber-600 mt-0.5">Ingresá el código que te dio tu nutricionista para vincularte.</p>
             </div>
           </div>
 
         ) : (
-          /* Nutriólogo vinculado */
+          /* Nutricionista vinculado */
           <div className="flex items-center gap-3 bg-green-50 rounded-xl px-4 py-3 border border-green-100">
             <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-bold text-sm flex items-center justify-center flex-shrink-0">
               {(nutriologo.nombre.charAt(0) + (nutriologo.apellido?.charAt(0) ?? '')).toUpperCase()}
@@ -227,7 +227,7 @@ export default function PerfilPage() {
           <form onSubmit={handleVincular} className="space-y-3 pt-1">
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1.5">
-                {nutriologo ? 'Código del nuevo nutriólogo' : 'Código de tu nutriólogo'}
+                {nutriologo ? 'Código del nuevo nutricionista' : 'Código de tu nutricionista'}
               </label>
 
               <div className="flex gap-2">
@@ -269,7 +269,7 @@ export default function PerfilPage() {
               </p>
             </div>
 
-            {/* Cancelar — solo si ya tiene un nutriólogo */}
+            {/* Cancelar — solo si ya tiene un nutricionista */}
             {nutriologo && (
               <button
                 type="button"

@@ -36,7 +36,7 @@ export async function POST() {
 
     const nutriologoId = auth.data.nutriologoId;
 
-    // 1. Obtener productos de la despensa (si tiene nutriólogo asignado)
+    // 1. Obtener productos de la despensa (si tiene nutricionista asignado)
     let inventario: { nombre: string; stock: number; unidad_medida: string | null }[] = [];
 
     if (nutriologoId) {

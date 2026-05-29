@@ -18,7 +18,7 @@ function getTipoComida(): 'desayuno' | 'almuerzo' | 'cena' | 'merienda' {
 //   - mediciones InBody (últimas 12, orden ASC para el gráfico)
 //   - plan nutricional activo
 //   - receta sugerida según la hora del día
-//   - notificaciones no leídas (máx 2, para "Notas del nutriólogo")
+//   - notificaciones no leídas (máx 2, para "Notas del nutricionista")
 //   - fechas de entradas de diario de los últimos 30 días (para adherencia semanal)
 //   - nombre del paciente
 //   - tipoComida calculado en servidor

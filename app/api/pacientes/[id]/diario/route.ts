@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requireNutriologo } from '@/lib/supabase/auth-helpers';
 
 // ─── GET /api/pacientes/[id]/diario ──────────────────────────────────────────
-// Devuelve todas las fotos del diario de un paciente para el nutriólogo.
+// Devuelve todas las fotos del diario de un paciente para el nutricionista.
 
 export async function GET(
   _request: Request,
@@ -14,7 +14,7 @@ export async function GET(
 
   const admin = createAdminClient();
 
-  // Verificar que el paciente pertenece a este nutriólogo
+  // Verificar que el paciente pertenece a este nutricionista
   const { data: paciente } = await admin
     .from('pacientes')
     .select('id')

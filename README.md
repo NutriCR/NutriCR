@@ -1,6 +1,6 @@
 # Nutri Smart CR
 
-Plataforma de nutrición personalizada con IA para Costa Rica. Conecta nutriólogos con sus pacientes a través de planes nutricionales inteligentes generados con Claude.
+Plataforma de nutrición personalizada con IA para Costa Rica. Conecta nutricionistas con sus pacientes a través de planes nutricionales inteligentes generados con Claude.
 
 ## Stack
 
@@ -15,7 +15,7 @@ Plataforma de nutrición personalizada con IA para Costa Rica. Conecta nutriólo
 
 | Rol | Acceso | Ruta |
 |-----|--------|------|
-| Nutriólogo | Dashboard web | `/nutriologo/dashboard` |
+| Nutricionista | Dashboard web | `/nutriologo/dashboard` |
 | Paciente | PWA móvil | `/paciente/inicio` |
 
 ## Estructura del proyecto
@@ -23,7 +23,7 @@ Plataforma de nutrición personalizada con IA para Costa Rica. Conecta nutriólo
 ```
 NutriCR/
 ├── app/
-│   ├── (nutriologo)/         # Dashboard nutriólogo
+│   ├── (nutriologo)/         # Dashboard nutricionista
 │   │   ├── dashboard/
 │   │   ├── pacientes/
 │   │   ├── planes/
@@ -116,7 +116,7 @@ npm run dev
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 - **Landing:** [http://localhost:3000](http://localhost:3000)
-- **Dashboard Nutriólogo:** [http://localhost:3000/nutriologo/dashboard](http://localhost:3000/nutriologo/dashboard)
+- **Dashboard Nutricionista:** [http://localhost:3000/nutriologo/dashboard](http://localhost:3000/nutriologo/dashboard)
 - **App Paciente:** [http://localhost:3000/paciente/inicio](http://localhost:3000/paciente/inicio)
 
 ## API Endpoints

@@ -241,7 +241,7 @@ export default function HomePage() {
               style={{ '--reveal-delay': '110ms', textShadow: '0 2px 8px rgba(0,0,0,0.4)' } as React.CSSProperties}
               className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight"
             >
-              Tu nutriólogo, tu despensa
+              Tu nutricionista, tu despensa
               <br className="hidden sm:block" />
               {' '}y tus recetas{' '}
               <span className="text-green-300">en un solo lugar</span>
@@ -268,7 +268,7 @@ export default function HomePage() {
                 className="group flex items-center justify-center gap-2.5 bg-white text-brand-700 font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-brand-50 active:scale-95 transition-all duration-200 text-base"
               >
                 <span className="text-xl group-hover:scale-110 transition-transform duration-200" aria-hidden>🩺</span>
-                Soy Nutriólogo
+                Soy Nutricionista
               </Link>
               <Link
                 href="/auth/registro/paciente"
@@ -364,7 +364,7 @@ export default function HomePage() {
                   bg:    'bg-violet-50',
                   text:  'text-violet-600',
                   title: 'Seguimiento profesional',
-                  desc:  'Tu nutriólogo monitorea tu adherencia semanal, evolución InBody y te envía notas directamente a la app.',
+                  desc:  'Tu nutricionista monitorea tu adherencia semanal, evolución InBody y te envía notas directamente a la app.',
                   delay: '260ms',
                 },
               ].map((b) => (
@@ -427,7 +427,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 mb-2">Registrate</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Pedile el código de invitación a tu nutriólogo y creá tu cuenta de paciente en minutos.
+                  Pedile el código de invitación a tu nutricionista y creá tu cuenta de paciente en minutos.
                 </p>
               </div>
 
@@ -503,7 +503,7 @@ export default function HomePage() {
               style={{ '--reveal-delay': '120ms' } as React.CSSProperties}
               className="text-brand-100 text-lg mb-10 leading-relaxed"
             >
-              Registrá tu cuenta de nutriólogo o pedile a tu profesional que te invite como paciente.
+              Registrá tu cuenta de nutricionista o pedile a tu profesional que te invite como paciente.
             </p>
             <div
               data-reveal
@@ -514,7 +514,7 @@ export default function HomePage() {
                 href="/auth/registro/nutriologo"
                 className="inline-flex items-center justify-center gap-2 bg-white text-brand-700 font-bold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl hover:bg-brand-50 active:scale-95 transition-all"
               >
-                <span aria-hidden>🩺</span> Crear cuenta nutriólogo
+                <span aria-hidden>🩺</span> Crear cuenta nutricionista
               </Link>
               <Link
                 href="/auth/login"
@@ -544,7 +544,7 @@ export default function HomePage() {
 
           {/* Links */}
           <nav className="flex items-center gap-6 text-sm text-slate-400">
-            <Link href="/auth/registro/nutriologo" className="hover:text-white transition-colors">Nutriólogos</Link>
+            <Link href="/auth/registro/nutriologo" className="hover:text-white transition-colors">Nutricionistas</Link>
             <Link href="/auth/registro/paciente"   className="hover:text-white transition-colors">Pacientes</Link>
             <Link href="/auth/login"               className="hover:text-white transition-colors">Contacto</Link>
           </nav>

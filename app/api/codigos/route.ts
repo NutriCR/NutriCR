@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   if (!data) {
     return NextResponse.json({
       valido: false,
-      error: 'Código inválido, verificá con tu nutriólogo',
+      error: 'Código inválido, verificá con tu nutricionista',
     });
   }
 
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 }
 
 // ─── POST /api/codigos ────────────────────────────────────────────────────────
-// Guarda (o reemplaza) el código de invitación del nutriólogo autenticado
+// Guarda (o reemplaza) el código de invitación del nutricionista autenticado
 // en la columna nutriologos.codigo_invitacion.
 // Body: { codigo: "XXXX-XXXX" }
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     .eq('id', auth.data.nutriologoId);
 
   if (error) {
-    // 23505 = unique constraint — código ya en uso por otro nutriólogo
+    // 23505 = unique constraint — código ya en uso por otro nutricionista
     if (error.code === '23505') {
       return NextResponse.json(
         { error: 'Código ya registrado. Generá uno nuevo.' },

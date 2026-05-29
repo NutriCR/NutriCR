@@ -15,7 +15,7 @@ export interface NutriologoSession {
 export interface PacienteSession {
   userId:       string;
   pacienteId:   string;
-  nutriologoId: string | null; // ID del nutriólogo asignado
+  nutriologoId: string | null; // ID del nutricionista asignado
 }
 
 // ─── Helpers internos ─────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ function forbidden(msg = 'Sin acceso') {
 
 // ─── requireNutriologo ────────────────────────────────────────────────────────
 /**
- * Verifica que haya una sesión activa de tipo nutriólogo.
+ * Verifica que haya una sesión activa de tipo nutricionista.
  * Retorna { ok: true, data: { userId, nutriologoId } } o { ok: false, response }.
  *
  * Uso en Route Handlers:
@@ -57,7 +57,7 @@ export async function requireNutriologo(): Promise<AuthResult<NutriologoSession>
     if (!data) {
       const tipoMeta = user.user_metadata?.tipo_usuario as string | undefined;
       if (tipoMeta !== 'nutriologo') {
-        return { ok: false, response: forbidden('Nutriólogo no encontrado') };
+        return { ok: false, response: forbidden('Nutricionista no encontrado') };
       }
 
       console.warn('[requireNutriologo] Fila faltante — auto-provisionando nutriologo para userId:', user.id);
@@ -67,7 +67,7 @@ export async function requireNutriologo(): Promise<AuthResult<NutriologoSession>
         {
           id:           user.id,
           email:        user.email ?? '',
-          nombre:       (user.user_metadata?.nombre as string | undefined) ?? 'Nutriólogo',
+          nombre:       (user.user_metadata?.nombre as string | undefined) ?? 'Nutricionista',
           apellido:     (user.user_metadata?.apellido as string | undefined) ?? null,
           tipo_usuario: 'nutriologo',
         },
@@ -83,7 +83,7 @@ export async function requireNutriologo(): Promise<AuthResult<NutriologoSession>
 
       if (insertErr || !created) {
         console.error('[requireNutriologo] insert nutriologos falló:', insertErr?.message);
-        return { ok: false, response: forbidden('Nutriólogo no encontrado') };
+        return { ok: false, response: forbidden('Nutricionista no encontrado') };
       }
 
       data = created;

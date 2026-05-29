@@ -17,7 +17,7 @@ export async function DELETE(
 
     const nutriologoId = auth.data.nutriologoId;
     if (!nutriologoId) {
-      return NextResponse.json({ error: 'Sin nutriólogo asignado' }, { status: 400 });
+      return NextResponse.json({ error: 'Sin nutricionista asignado' }, { status: 400 });
     }
 
     const { error } = await createAdminClient()
