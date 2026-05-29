@@ -42,7 +42,10 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('main:', d.get\\('main'\\), 'module:', d.get\\('module'\\)\\)\")",
       "Bash(git -C /Users/macdejose/NutriCR diff --stat HEAD)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['dependencies','devDependencies'] if k in d}, indent=2\\)\\)\")",
-      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/macdejose/NutriCR/public/manifest.json'\\)\\); [print\\(i['src'], i['sizes']\\) for i in d['icons']]\")"
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/macdejose/NutriCR/public/manifest.json'\\)\\); [print\\(i['src'], i['sizes']\\) for i in d['icons']]\")",
+      "Bash(grep -E \"^sharp$|^canvas$|^jimp$|^svg2img$\")",
+      "Bash(npm list *)",
+      "Bash(sort -k5 -h)"
     ]
   }
 }

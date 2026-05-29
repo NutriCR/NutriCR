@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="round">
+      <rect width="512" height="512" rx="115" ry="115"/>
+    </clipPath>
+  </defs>
+
+  <!-- Fondo verde oscuro -->
+  <rect width="512" height="512" rx="115" ry="115" fill="#1B5E20"/>
+
+  <!-- Sutil degradado de profundidad en el fondo -->
+  <rect width="512" height="512" rx="115" ry="115"
+        fill="url(#bgGrad)" opacity="0.35"/>
+  <defs>
+    <radialGradient id="bgGrad" cx="40%" cy="30%" r="70%">
+      <stop offset="0%"   stop-color="#2E7D32"/>
+      <stop offset="100%" stop-color="#1B5E20"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Círculo exterior (aro) -->
+  <circle cx="256" cy="256" r="170"
+          fill="none"
+          stroke="#76C442"
+          stroke-width="14"
+          stroke-linecap="round"/>
+
+  <!-- ══════════════════════════════════════
+       TENEDOR  (parte superior derecha)
+       Mango vertical + 3 dientes arriba
+  ══════════════════════════════════════ -->
+  <g stroke="#76C442" stroke-linecap="round" stroke-linejoin="round"
+     fill="none" stroke-width="13">
+
+    <!-- Mango del tenedor -->
+    <line x1="290" y1="190" x2="290" y2="330"/>
+
+    <!-- Diente izquierdo -->
+    <line x1="272" y1="145" x2="272" y2="210"/>
+    <!-- Diente central -->
+    <line x1="290" y1="140" x2="290" y2="210"/>
+    <!-- Diente derecho -->
+    <line x1="308" y1="145" x2="308" y2="210"/>
+
+    <!-- Puente que une los dientes -->
+    <path d="M272,210 Q272,230 290,232 Q308,230 308,210" fill="none"/>
+  </g>
+
+  <!-- ══════════════════════════════════════
+       HOJA  (parte inferior, centrada)
+       Forma de hoja con nervio central
+  ══════════════════════════════════════ -->
+  <g stroke="#76C442" stroke-linecap="round" stroke-linejoin="round"
+     fill="none" stroke-width="13">
+
+    <!-- Silueta de la hoja: arranca en tallo bajo, sube y se cierra en punta alta -->
+    <path d="
+      M 200,360
+      C 200,360 185,300 205,268
+      C 220,242 248,232 256,228
+      C 264,232 292,242 307,268
+      C 327,300 312,360 312,360
+      C 284,368 228,368 200,360
+      Z
+    "/>
+
+    <!-- Nervio central de la hoja -->
+    <line x1="256" y1="360" x2="256" y2="232"/>
+
+    <!-- Nervio izquierdo -->
+    <line x1="256" y1="295" x2="218" y2="318"/>
+    <!-- Nervio derecho -->
+    <line x1="256" y1="295" x2="294" y2="318"/>
+
+    <!-- Tallo -->
+    <line x1="256" y1="360" x2="256" y2="388"/>
+  </g>
+</svg>
