@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Playfair_Display } from 'next/font/google';
 import { cn } from '@/lib/utils';
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -112,18 +119,17 @@ function Header({ scrolled }: { scrolled: boolean }) {
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div
-            className={cn(
-              'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300',
-              scrolled ? 'bg-brand-600 shadow-sm' : 'bg-white/20 backdrop-blur-sm border border-white/30',
-            )}
-          >
-            <span className="text-white text-base font-black leading-none">N</span>
-          </div>
+          <img
+            src="/icons/icon-192x192.png"
+            alt="Nutri Smart CR"
+            width={40}
+            height={40}
+            className="rounded-xl flex-shrink-0 shadow-sm"
+          />
           <span
             className={cn(
               'text-base font-bold tracking-tight transition-colors duration-300',
-              scrolled ? 'text-brand-700' : 'text-white',
+              scrolled ? 'text-brand-700' : 'text-slate-800',
             )}
           >
             Nutri Smart CR
@@ -163,7 +169,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden">
+    <div className={cn('min-h-screen flex flex-col bg-white overflow-x-hidden', playfair.variable)}>
       <Header scrolled={scrolled} />
 
       <main className="flex-1">
@@ -217,8 +223,7 @@ export default function HomePage() {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                'linear-gradient(160deg, rgba(27,94,32,0.82) 0%, rgba(21,128,61,0.68) 55%, rgba(27,94,32,0.88) 100%)',
+              background: 'rgba(255, 255, 255, 0.35)',
             }}
           />
 
@@ -228,31 +233,31 @@ export default function HomePage() {
             {/* Chip animado */}
             <div
               data-reveal
-              className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-4 py-1.5 mb-8"
+              className="inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-white/60 rounded-full px-4 py-1.5 mb-8"
             >
-              <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse flex-shrink-0" />
-              <span className="text-white/90 text-xs font-semibold tracking-widest uppercase">
+              <span className="w-2 h-2 rounded-full bg-brand-600 animate-pulse flex-shrink-0" />
+              <span className="text-slate-700 text-xs font-semibold tracking-widest uppercase">
                 Diseñado para Costa Rica
               </span>
             </div>
 
-            {/* Titular */}
+            {/* Titular — Playfair Display */}
             <h1
               data-reveal
-              style={{ '--reveal-delay': '110ms' } as React.CSSProperties}
-              className="text-4xl sm:text-5xl lg:text-[3.6rem] font-black text-white leading-[1.08] tracking-tight"
+              style={{ '--reveal-delay': '110ms', textShadow: '0 1px 8px rgba(255,255,255,0.6)' } as React.CSSProperties}
+              className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.08] tracking-tight [font-family:var(--font-playfair)]"
             >
               Tu nutriólogo, tu despensa
               <br className="hidden sm:block" />
               {' '}y tus recetas{' '}
-              <span className="text-green-300">en un solo lugar</span>
+              <span className="text-brand-700">en un solo lugar</span>
             </h1>
 
             {/* Subtítulo */}
             <p
               data-reveal
               style={{ '--reveal-delay': '240ms' } as React.CSSProperties}
-              className="mt-6 text-lg sm:text-xl text-white/80 max-w-xl mx-auto leading-relaxed"
+              className="mt-6 text-lg sm:text-xl text-slate-700 max-w-xl mx-auto leading-relaxed"
             >
               Tecnología al servicio de tu salud.
               Diseñado para Costa Rica.
@@ -266,14 +271,14 @@ export default function HomePage() {
             >
               <Link
                 href="/auth/registro/nutriologo"
-                className="group flex items-center justify-center gap-2.5 bg-white text-brand-700 font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-brand-50 active:scale-95 transition-all duration-200 text-base"
+                className="group flex items-center justify-center gap-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl active:scale-95 transition-all duration-200 text-base"
               >
                 <span className="text-xl group-hover:scale-110 transition-transform duration-200" aria-hidden>🩺</span>
                 Soy Nutriólogo
               </Link>
               <Link
                 href="/auth/registro/paciente"
-                className="group flex items-center justify-center gap-2.5 bg-brand-500/90 hover:bg-brand-500 text-white font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl active:scale-95 transition-all duration-200 border border-white/25 text-base"
+                className="group flex items-center justify-center gap-2.5 bg-white/80 hover:bg-white text-brand-700 font-bold py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl active:scale-95 transition-all duration-200 border border-brand-200 text-base"
               >
                 <span className="text-xl group-hover:scale-110 transition-transform duration-200" aria-hidden>👤</span>
                 Soy Paciente
@@ -284,10 +289,10 @@ export default function HomePage() {
             <p
               data-reveal
               style={{ '--reveal-delay': '490ms' } as React.CSSProperties}
-              className="mt-6 text-white/60 text-sm"
+              className="mt-6 text-slate-600 text-sm"
             >
               ¿Ya tenés cuenta?{' '}
-              <Link href="/auth/login" className="text-white font-semibold underline underline-offset-2 hover:text-green-300 transition-colors">
+              <Link href="/auth/login" className="text-brand-700 font-semibold underline underline-offset-2 hover:text-brand-900 transition-colors">
                 Iniciá sesión
               </Link>
             </p>
@@ -302,7 +307,7 @@ export default function HomePage() {
                 aria-label={`Foto ${i + 1}`}
                 className={cn(
                   'rounded-full transition-all duration-300',
-                  i === currentSlide ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70',
+                  i === currentSlide ? 'w-6 h-2 bg-brand-600' : 'w-2 h-2 bg-slate-400/70 hover:bg-slate-600',
                 )}
               />
             ))}
@@ -310,7 +315,7 @@ export default function HomePage() {
 
           {/* Flecha de scroll hacia abajo */}
           <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 animate-bounce" aria-hidden>
-            <svg className="w-5 h-5 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
