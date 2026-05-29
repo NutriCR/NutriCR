@@ -55,16 +55,10 @@ export default function RegistroNutriologoPage() {
 
       if (signUpError) throw new Error(signUpError.message);
 
-      // signUpData.user es null cuando Supabase tiene "Confirm email" ON
-      // y el email ya está registrado (anti-enumeración). En ese caso no
-      // hay user_id disponible → tratar como email duplicado.
       if (!signUpData.user) {
         throw new Error('User already registered');
       }
 
-      // signUpData.session puede ser null si "Confirm email" está ON.
-      // En ese caso no hay cookies de sesión, así que pasamos el user_id
-      // en el body para que setup-profile lo verifique vía admin API.
       const res = await fetch('/api/auth/setup-profile', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,7 +67,7 @@ export default function RegistroNutriologoPage() {
           nombre:           form.nombre.trim(),
           apellido:         form.apellido.trim() || null,
           numero_colegiado: form.numeroColegiado.trim() || null,
-          user_id:          signUpData.user.id,   // para el Modo B (sin sesión)
+          user_id:          signUpData.user.id,
         }),
       });
 
@@ -100,42 +94,45 @@ export default function RegistroNutriologoPage() {
   const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
   return (
-    <>
-      {/* Panel izquierdo — branding */}
-      <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-brand-600 to-brand-800 flex-col justify-between p-12">
-        <div>
-          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-            <span className="text-white text-xl font-bold">N</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mt-8 leading-tight">
-            Únete como<br />Nutriólogo
-          </h1>
-          <p className="text-brand-100 text-base mt-4 leading-relaxed">
-            Gestiona tus pacientes, planes nutricionales y recetas con IA desde un solo lugar.
-          </p>
-        </div>
-        <div className="bg-white/10 rounded-2xl p-5">
-          <p className="text-white text-sm font-medium mb-2">✅ Lo que obtienes:</p>
-          <ul className="space-y-2 text-brand-100 text-sm">
-            <li>• Dashboard con adherencia de pacientes</li>
-            <li>• InBody y seguimiento de progreso</li>
-            <li>• Generación de recetas con IA</li>
-            <li>• Notas y comunicación con pacientes</li>
-          </ul>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-y-auto">
+      {/* ── Fondo hero ──────────────────────────────────────────────────────── */}
+      <img
+        src="/images/hero2.jpg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover object-[center_20%]"
+      />
 
-      {/* Panel derecho — formulario */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-10 overflow-y-auto">
-        <div className="w-full max-w-md">
-          {/* Logo mobile */}
-          <div className="lg:hidden mb-6 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">N</span>
-            </div>
-            <span className="text-sm font-bold text-brand-700">Nutri Smart CR</span>
-          </div>
+      {/* ── Overlay blur ────────────────────────────────────────────────────── */}
+      <div
+        className="absolute inset-0"
+        style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.15)' }}
+      />
 
+      {/* ── Contenido ───────────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col items-center py-10 px-4">
+        {/* Logo + nombre */}
+        <div className="flex items-center gap-3 mb-6">
+          <img
+            src="/icons/icon-192x192.png"
+            alt="Nutri Smart CR"
+            width={52}
+            height={52}
+            className="rounded-xl shadow-md"
+          />
+          <span
+            className="text-2xl font-bold text-white"
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.45)' }}
+          >
+            Nutri Smart CR
+          </span>
+        </div>
+
+        {/* Card del formulario */}
+        <div
+          className="w-full max-w-md rounded-2xl shadow-2xl p-8 mb-8"
+          style={{ background: 'rgba(255,255,255,0.85)' }}
+        >
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Nutriólogo</h2>
           <p className="text-slate-400 text-sm mb-6">Crea tu cuenta profesional en Nutri Smart CR.</p>
 
@@ -258,6 +255,6 @@ export default function RegistroNutriologoPage() {
           </p>
         </div>
       </div>
-    </>
+    </div>
   );
 }
