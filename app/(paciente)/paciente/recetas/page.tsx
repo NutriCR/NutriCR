@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,8 @@ interface Menu {
   merienda: Comida;
 }
 
-type Estado = 'idle' | 'generando' | 'listo' | 'error';
+// 'cargando' = verificando si ya hay menú para hoy (solo al montar)
+type Estado = 'cargando' | 'idle' | 'generando' | 'listo' | 'error';
 type ClaveComida = keyof Menu;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -41,7 +42,6 @@ const COMIDAS: { key: ClaveComida; label: string; icon: string; hora: string }[]
 ];
 
 // ─── Helpers de normalización ────────────────────────────────────────────────
-// Claude a veces devuelve strings ("150g"), números, o campos con tildes.
 
 function parseMacro(val: unknown): number {
   if (typeof val === 'number') return Math.round(val);
@@ -64,7 +64,6 @@ function normalizarLista(raw: unknown): string[] {
   return raw.map((item) => {
     if (typeof item === 'string') return item;
     if (typeof item === 'object' && item !== null) {
-      // Claude a veces devuelve objetos {nombre, cantidad, unidad}
       const o = item as Record<string, unknown>;
       const partes = [o.cantidad, o.unidad, o.nombre ?? o.item]
         .filter(Boolean)
@@ -85,6 +84,15 @@ function normalizarComida(raw: unknown): Comida {
   };
 }
 
+function normalizarMenu(raw: Record<string, unknown>): Menu {
+  return {
+    desayuno: normalizarComida(raw.desayuno),
+    almuerzo: normalizarComida(raw.almuerzo),
+    cena:     normalizarComida(raw.cena),
+    merienda: normalizarComida(raw.merienda),
+  };
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ComidaCard({
@@ -93,26 +101,24 @@ function ComidaCard({
   expandido,
   onToggle,
 }: {
-  comida: Comida;
-  config: (typeof COMIDAS)[0];
+  comida:    Comida;
+  config:    (typeof COMIDAS)[0];
   expandido: boolean;
-  onToggle: () => void;
+  onToggle:  () => void;
 }) {
   const { macros } = comida;
 
   return (
     <Card className="overflow-hidden">
-      {/* ── Cabecera — siempre visible ── */}
+      {/* ── Cabecera ── */}
       <button
         onClick={onToggle}
         className="w-full p-4 flex items-start gap-3 text-left active:bg-slate-50 transition-colors"
       >
-        {/* Icono comida */}
         <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-2xl flex-shrink-0">
           {config.icon}
         </div>
 
-        {/* Título + macros */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -123,7 +129,6 @@ function ComidaCard({
                 {comida.nombre}
               </p>
             </div>
-            {/* Chevron */}
             <span
               className={cn(
                 'text-slate-300 text-lg flex-shrink-0 transition-transform duration-200 mt-0.5',
@@ -134,7 +139,6 @@ function ComidaCard({
             </span>
           </div>
 
-          {/* Resumen de macros */}
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2">
             <span className="text-xs text-slate-500">
               🔥 <span className="font-semibold text-slate-700">{macros.calorias}</span> kcal
@@ -155,7 +159,6 @@ function ComidaCard({
       {/* ── Contenido expandido ── */}
       {expandido && (
         <div className="px-4 pb-5 border-t border-slate-100 space-y-4">
-          {/* Ingredientes */}
           {comida.ingredientes.length > 0 && (
             <div className="pt-3">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
@@ -172,7 +175,6 @@ function ComidaCard({
             </div>
           )}
 
-          {/* Instrucciones */}
           {comida.instrucciones.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
@@ -199,33 +201,54 @@ function ComidaCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RecetasPage() {
-  const [estado, setEstado]     = useState<Estado>('idle');
-  const [menu, setMenu]         = useState<Menu | null>(null);
-  const [error, setError]       = useState<string | null>(null);
+  const [estado,     setEstado]     = useState<Estado>('cargando');
+  const [menu,       setMenu]       = useState<Menu | null>(null);
+  const [error,      setError]      = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<Set<ClaveComida>>(new Set<ClaveComida>(['desayuno']));
-  const [fuente, setFuente]     = useState<'despensa' | 'tipicos_cr' | null>(null);
+  const [fuente,     setFuente]     = useState<'despensa' | 'tipicos_cr' | null>(null);
 
-  // ── Generar ───────────────────────────────────────────────────────────────
+  // ── Verificar si ya hay menú para hoy al montar ────────────────────────────
+
+  useEffect(() => {
+    async function verificarMenuHoy() {
+      try {
+        const res  = await fetch('/api/generar-recetas');
+        const json = await res.json() as { menu: Record<string, unknown> | null };
+
+        if (json.menu) {
+          setMenu(normalizarMenu(json.menu));
+          setEstado('listo');
+        } else {
+          setEstado('idle');
+        }
+      } catch {
+        // Si falla la verificación, ir directo al estado idle
+        setEstado('idle');
+      }
+    }
+
+    verificarMenuHoy();
+  }, []);
+
+  // ── Generar (o regenerar) ──────────────────────────────────────────────────
 
   async function handleGenerar() {
     setEstado('generando');
     setError(null);
-    setMenu(null);
     setExpandidos(new Set<ClaveComida>(['desayuno']));
 
     try {
       const res  = await fetch('/api/generar-recetas', { method: 'POST' });
-      const json = await res.json();
+      const json = await res.json() as {
+        menu?: Record<string, unknown>;
+        usandoIngredientes?: string;
+        error?: string;
+      };
+
       if (!res.ok) throw new Error(json.error ?? 'Error al generar recetas');
 
-      const raw = json.menu as Record<string, unknown>;
-      setMenu({
-        desayuno: normalizarComida(raw.desayuno),
-        almuerzo: normalizarComida(raw.almuerzo),
-        cena:     normalizarComida(raw.cena),
-        merienda: normalizarComida(raw.merienda),
-      });
-      setFuente(json.usandoIngredientes ?? null);
+      setMenu(normalizarMenu(json.menu!));
+      setFuente((json.usandoIngredientes as 'despensa' | 'tipicos_cr') ?? null);
       setEstado('listo');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -236,8 +259,7 @@ export default function RecetasPage() {
   function toggleExpandido(key: ClaveComida) {
     setExpandidos((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -262,75 +284,98 @@ export default function RecetasPage() {
     <div className="space-y-5 pb-6">
 
       {/* ── Header ── */}
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold text-slate-800">Recetas del día</h1>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Menú generado con tus ingredientes disponibles
-        </p>
+      <div className="flex items-start justify-between pt-2 gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Recetas del día</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Menú generado con tus ingredientes disponibles
+          </p>
+        </div>
+
+        {/* Botón "Regenerar" — solo visible cuando ya hay menú */}
+        {estado === 'listo' && (
+          <button
+            onClick={handleGenerar}
+            className="flex-shrink-0 mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-brand-600 active:scale-95 transition-all px-2.5 py-1.5 rounded-xl hover:bg-brand-50"
+            title="Generar un menú diferente para hoy"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Regenerar
+          </button>
+        )}
       </div>
 
-      {/* ── Botón principal ── */}
-      <Button
-        size="lg"
-        onClick={handleGenerar}
-        disabled={estado === 'generando'}
-        className="w-full"
-      >
-        {estado === 'generando' ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      {/* ── Estado: verificando si hay menú para hoy ── */}
+      {estado === 'cargando' && (
+        <div className="space-y-3">
+          {COMIDAS.map((c) => (
+            <div key={c.key} className="bg-slate-100 rounded-2xl h-24 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* ── Estado: sin menú todavía ── */}
+      {estado === 'idle' && (
+        <>
+          <Button size="lg" onClick={handleGenerar} className="w-full">
+            ✨ Generar recetas del día
+          </Button>
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-5xl shadow-inner">
+              🍽️
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700">¿Qué comemos hoy?</p>
+              <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
+                Claude crea un menú completo con los ingredientes de tu despensa.
+                Si está vacía, usa recetas típicas costarricenses.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Estado: generando ── */}
+      {estado === 'generando' && (
+        <>
+          <div className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-brand-600">
+            <span className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             Generando con Claude…
-          </span>
-        ) : estado === 'listo' ? (
-          '🔄 Regenerar menú del día'
-        ) : (
-          '✨ Generar recetas del día'
-        )}
-      </Button>
+          </div>
+          <div className="space-y-3">
+            {COMIDAS.map((c) => (
+              <div key={c.key} className="bg-slate-100 rounded-2xl h-24 animate-pulse" />
+            ))}
+            <div className="bg-brand-100 rounded-2xl h-32 animate-pulse" />
+          </div>
+        </>
+      )}
+
+      {/* ── Error ── */}
+      {estado === 'error' && error && (
+        <>
+          <Card className="p-4 bg-red-50 border-red-200">
+            <div className="flex items-start gap-2">
+              <span className="flex-shrink-0">⚠️</span>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </Card>
+          <Button size="lg" onClick={handleGenerar} className="w-full">
+            ✨ Intentar de nuevo
+          </Button>
+        </>
+      )}
 
       {/* ── Fuente de ingredientes ── */}
-      {fuente && (
+      {fuente && estado === 'listo' && (
         <p className="text-xs text-slate-400 text-center -mt-2">
           {fuente === 'despensa'
             ? '🥫 Basado en los ingredientes de tu despensa'
             : '🇨🇷 Usando ingredientes típicos costarricenses (despensa vacía)'}
         </p>
-      )}
-
-      {/* ── Error ── */}
-      {estado === 'error' && error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0">⚠️</span>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        </Card>
-      )}
-
-      {/* ── Empty state (idle) ── */}
-      {estado === 'idle' && (
-        <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center text-5xl shadow-inner">
-            🍽️
-          </div>
-          <div>
-            <p className="font-semibold text-slate-700">¿Qué comemos hoy?</p>
-            <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
-              Claude crea un menú completo con los ingredientes de tu despensa.
-              Si está vacía, usa recetas típicas costarricenses.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Esqueletos de carga ── */}
-      {estado === 'generando' && (
-        <div className="space-y-3">
-          {COMIDAS.map((c) => (
-            <div key={c.key} className="bg-slate-100 rounded-2xl h-24 animate-pulse" />
-          ))}
-          <div className="bg-brand-100 rounded-2xl h-32 animate-pulse" />
-        </div>
       )}
 
       {/* ── Tarjetas de comidas ── */}
@@ -354,7 +399,6 @@ export default function RecetasPage() {
               <p className="text-sm font-semibold text-white/80 mb-3">
                 📊 Total del día
               </p>
-
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div>
                   <p className="text-2xl font-bold">{totalDia.calorias}</p>
@@ -372,16 +416,6 @@ export default function RecetasPage() {
                   <p className="text-2xl font-bold">{totalDia.grasas}g</p>
                   <p className="text-xs text-white/70 mt-0.5">grasas</p>
                 </div>
-              </div>
-
-              {/* Separador */}
-              <div className="border-t border-white/20 mt-4 pt-3">
-                <button
-                  onClick={handleGenerar}
-                  className="w-full py-2 rounded-xl bg-white/15 hover:bg-white/25 active:bg-white/10 text-white text-sm font-medium transition-colors"
-                >
-                  🔄 Generar otro menú
-                </button>
               </div>
             </Card>
           )}

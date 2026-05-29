@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requirePaciente } from '@/lib/supabase/auth-helpers';
 import { anthropic } from '@/lib/anthropic/client';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const INGREDIENTES_CR_FALLBACK = [
   'arroz', 'frijoles negros', 'pollo', 'plátano maduro', 'tortillas de maíz',
   'huevos', 'tomate', 'cebolla', 'chile dulce', 'culantro', 'ajo',
@@ -26,21 +28,65 @@ function buildPrompt(listaProductos: string): string {
   );
 }
 
-// ─── POST /api/generar-recetas ────────────────────────────────────────────────
+/** Fecha de hoy en zona horaria de Costa Rica (UTC-6, sin DST). */
+function hoyEnCR(): string {
+  const crMs = Date.now() - 6 * 60 * 60 * 1000;
+  return new Date(crMs).toISOString().slice(0, 10); // 'YYYY-MM-DD'
+}
 
-export async function POST() {
+// ─── GET /api/generar-recetas ─────────────────────────────────────────────────
+// Devuelve el menú ya guardado para HOY si existe, o { menu: null } si no.
+
+export async function GET() {
   try {
-    // Verificar sesión de paciente
     const auth = await requirePaciente();
     if (!auth.ok) return auth.response;
 
-    const nutriologoId = auth.data.nutriologoId;
+    const { pacienteId } = auth.data;
+    const hoy = hoyEnCR();
 
-    // 1. Obtener productos de la despensa (si tiene nutricionista asignado)
+    const { data, error } = await createAdminClient()
+      .from('recetas_generadas')
+      .select('menu, created_at')
+      .eq('paciente_id', pacienteId)
+      .eq('fecha', hoy)
+      .is('tipo_comida', null)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[generar-recetas] GET error:', error);
+      return NextResponse.json({ menu: null });
+    }
+
+    return NextResponse.json({
+      menu:  data?.menu ?? null,
+      fecha: hoy,
+    });
+
+  } catch (err) {
+    console.error('[generar-recetas] GET catch:', err);
+    return NextResponse.json({ menu: null });
+  }
+}
+
+// ─── POST /api/generar-recetas ────────────────────────────────────────────────
+// Genera un nuevo menú con Claude, lo persiste y lo devuelve.
+// Si ya existe un menú para hoy, lo sobreescribe (flujo de "Regenerar").
+
+export async function POST() {
+  try {
+    const auth = await requirePaciente();
+    if (!auth.ok) return auth.response;
+
+    const { pacienteId, nutriologoId } = auth.data;
+    const admin = createAdminClient();
+    const hoy   = hoyEnCR();
+
+    // 1. Despensa del paciente (si tiene nutricionista asignado)
     let inventario: { nombre: string; stock: number; unidad_medida: string | null }[] = [];
 
     if (nutriologoId) {
-      const { data, error: invError } = await createAdminClient()
+      const { data, error: invError } = await admin
         .from('inventario')
         .select('nombre, stock, unidad_medida')
         .eq('nutriologo_id', nutriologoId)
@@ -54,13 +100,10 @@ export async function POST() {
       }
     }
 
-    // 2. Lista de ingredientes (despensa real o fallback costarricense)
-    const usandoDespensa = inventario.length > 0;
-
-    const listaProductos = usandoDespensa
-      ? inventario
-          .map((item) => `${item.nombre} (${item.stock} ${item.unidad_medida ?? 'und'})`)
-          .join(', ')
+    // 2. Lista de ingredientes
+    const usandoDespensa  = inventario.length > 0;
+    const listaProductos  = usandoDespensa
+      ? inventario.map((item) => `${item.nombre} (${item.stock} ${item.unidad_medida ?? 'und'})`).join(', ')
       : INGREDIENTES_CR_FALLBACK.join(', ');
 
     // 3. Llamar a Claude
@@ -75,7 +118,7 @@ export async function POST() {
       return NextResponse.json({ error: 'El modelo no devolvió texto' }, { status: 500 });
     }
 
-    // 4. Limpiar y parsear
+    // 4. Parsear respuesta
     const raw = block.text.trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/i, '');
@@ -85,17 +128,49 @@ export async function POST() {
       parsed = JSON.parse(raw);
     } catch {
       console.error('[generar-recetas] JSON inválido de Claude:', raw.slice(0, 300));
-      return NextResponse.json({ error: 'La IA devolvió una respuesta con formato inválido' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'La IA devolvió una respuesta con formato inválido' },
+        { status: 500 },
+      );
     }
 
     const COMIDAS_REQUERIDAS = ['desayuno', 'almuerzo', 'cena', 'merienda'];
     if (!parsed?.menu || COMIDAS_REQUERIDAS.some((c) => !parsed.menu[c])) {
-      return NextResponse.json({ error: 'La respuesta de la IA no incluye todas las comidas del día' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'La respuesta de la IA no incluye todas las comidas del día' },
+        { status: 500 },
+      );
+    }
+
+    // 5. Persistir en recetas_generadas
+    //    Primero borrar el menú existente de hoy (si el paciente está regenerando)
+    await admin
+      .from('recetas_generadas')
+      .delete()
+      .eq('paciente_id', pacienteId)
+      .eq('fecha', hoy)
+      .is('tipo_comida', null);
+
+    const { error: insertErr } = await admin
+      .from('recetas_generadas')
+      .insert({
+        paciente_id:     pacienteId,
+        nombre:          `menu_diario_${hoy}`,
+        generada_por_ia: true,
+        tipo_comida:     null,          // null = menú completo del día
+        fecha:           hoy,
+        menu:            parsed.menu,
+      });
+
+    if (insertErr) {
+      // No bloqueamos la respuesta — el menú igual se devuelve al cliente
+      console.error('[generar-recetas] insert recetas_generadas:', insertErr);
     }
 
     return NextResponse.json({
       menu:               parsed.menu,
       usandoIngredientes: usandoDespensa ? 'despensa' : 'tipicos_cr',
+      fecha:              hoy,
     });
 
   } catch (err) {

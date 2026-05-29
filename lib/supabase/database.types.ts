@@ -308,6 +308,10 @@ export interface Database {
           tipo_comida: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
           generada_por_ia: boolean;
           prompt_usado: string | null;
+          /** Fecha del menú diario (YYYY-MM-DD). Requiere migración: ALTER TABLE recetas_generadas ADD COLUMN IF NOT EXISTS fecha DATE */
+          fecha: string | null;
+          /** Menú completo del día como JSON. Requiere migración: ALTER TABLE recetas_generadas ADD COLUMN IF NOT EXISTS menu JSONB */
+          menu: Json | null;
           created_at: string;
         };
         Insert: {
@@ -324,6 +328,8 @@ export interface Database {
           tipo_comida?: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
           generada_por_ia?: boolean;
           prompt_usado?: string | null;
+          fecha?: string | null;
+          menu?: Json | null;
           created_at?: string;
         };
         Update: {
@@ -340,6 +346,8 @@ export interface Database {
           tipo_comida?: 'desayuno' | 'almuerzo' | 'cena' | 'merienda' | null;
           generada_por_ia?: boolean;
           prompt_usado?: string | null;
+          fecha?: string | null;
+          menu?: Json | null;
         };
         Relationships: [
           {
