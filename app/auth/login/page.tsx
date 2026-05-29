@@ -62,16 +62,16 @@ function LoginForm() {
     <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
       {/* ── Fondo hero ──────────────────────────────────────────────────────── */}
       <img
-        src="/images/hero1.jpg"
+        src="/images/hero5.jpg"
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      {/* ── Overlay blur ────────────────────────────────────────────────────── */}
+      {/* ── Overlay ─────────────────────────────────────────────────────────── */}
       <div
         className="absolute inset-0"
-        style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.15)' }}
+        style={{ background: 'rgba(255,255,255,0.15)' }}
       />
 
       {/* ── Logo + nombre ───────────────────────────────────────────────────── */}
@@ -94,7 +94,7 @@ function LoginForm() {
       {/* ── Card del formulario ─────────────────────────────────────────────── */}
       <div
         className="relative z-10 w-full max-w-sm rounded-2xl shadow-2xl p-8"
-        style={{ background: 'rgba(255,255,255,0.85)' }}
+        style={{ background: 'rgba(255,255,255,0.90)' }}
       >
         <h2 className="text-2xl font-bold text-slate-800 mb-1">Iniciar sesión</h2>
         <p className="text-slate-400 text-sm mb-6">Ingresa tus credenciales para continuar.</p>
