@@ -18,8 +18,8 @@ export const metadata: Metadata = {
     title: 'Nutri Smart CR',
   },
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/apple-touch-icon.png',
+    icon: '/api/pwa-icon?s=192',
+    // apple-touch-icon se genera automáticamente por app/apple-icon.tsx
   },
 };
 
