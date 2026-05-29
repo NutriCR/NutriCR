@@ -223,7 +223,7 @@ function ModalCodigo({
             <p className="text-xs font-semibold text-slate-600">¿Cómo funciona?</p>
             <ol className="space-y-1.5 text-xs text-slate-500">
               <li className="flex gap-2"><span className="font-bold text-brand-600">1.</span> Copiá el código y mandáselo a tu paciente</li>
-              <li className="flex gap-2"><span className="font-bold text-brand-600">2.</span> El paciente se registra en NutriCR e ingresa el código</li>
+              <li className="flex gap-2"><span className="font-bold text-brand-600">2.</span> El paciente se registra en Nutri Smart CR e ingresa el código</li>
               <li className="flex gap-2"><span className="font-bold text-brand-600">3.</span> Queda vinculado a tu panel automáticamente</li>
             </ol>
           </div>

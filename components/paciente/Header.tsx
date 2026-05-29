@@ -35,7 +35,7 @@ function formatFecha(iso: string) {
 
 export default function PacienteHeader() {
   const pathname = usePathname();
-  const title    = pageTitles[pathname] ?? 'NutriCR';
+  const title    = pageTitles[pathname] ?? 'Nutri Smart CR';
 
   const [notifs,      setNotifs]      = useState<Notificacion[]>([]);
   const [noLeidas,    setNoLeidas]    = useState(0);
@@ -73,7 +73,7 @@ export default function PacienteHeader() {
   return (
     <>
       <header className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <span className="font-bold text-brand-700">NutriCR</span>
+        <span className="font-bold text-brand-700">Nutri Smart CR</span>
         <h1 className="font-semibold text-slate-700 text-sm">{title}</h1>
 
         {/* Campana de notificaciones */}

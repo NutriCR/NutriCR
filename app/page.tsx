@@ -12,7 +12,7 @@ export default function HomePage() {
         <div className="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center mx-auto mb-4">
           <span className="text-white text-2xl font-bold">N</span>
         </div>
-        <h1 className="text-5xl font-bold text-brand-700 mb-4">NutriCR</h1>
+        <h1 className="text-5xl font-bold text-brand-700 mb-4">Nutri Smart CR</h1>
         <p className="text-xl text-brand-600">Nutrición personalizada con inteligencia artificial</p>
       </div>
 

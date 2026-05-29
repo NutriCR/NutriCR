@@ -67,7 +67,7 @@ function LoginForm() {
             <span className="text-white text-xl font-bold">N</span>
           </div>
           <h1 className="text-4xl font-bold text-white mt-8 leading-tight">
-            Bienvenido a<br />NutriCR
+            Bienvenido a<br />Nutri Smart CR
           </h1>
           <p className="text-brand-100 text-lg mt-4 leading-relaxed">
             Nutrición personalizada con<br />inteligencia artificial.
@@ -95,7 +95,7 @@ function LoginForm() {
           <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center mx-auto mb-3">
             <span className="text-white text-2xl font-bold">N</span>
           </div>
-          <p className="text-sm font-semibold text-brand-700">NutriCR</p>
+          <p className="text-sm font-semibold text-brand-700">Nutri Smart CR</p>
         </div>
 
         <div className="w-full max-w-sm">
@@ -160,7 +160,7 @@ function LoginForm() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-slate-100">
-            <p className="text-sm text-slate-500 text-center mb-4">¿Eres nuevo en NutriCR?</p>
+            <p className="text-sm text-slate-500 text-center mb-4">¿Eres nuevo en Nutri Smart CR?</p>
             <div className="grid grid-cols-2 gap-3">
               <Link
                 href="/auth/registro/nutriologo"

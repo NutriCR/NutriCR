@@ -1,6 +1,6 @@
 {
-  "name": "NutriCR - Nutrición Personalizada",
-  "short_name": "NutriCR",
+  "name": "Nutri Smart CR - Nutrición Personalizada",
+  "short_name": "Nutri Smart CR",
   "description": "Plataforma de nutrición personalizada con inteligencia artificial para Costa Rica",
   "start_url": "/paciente/inicio",
   "display": "standalone",

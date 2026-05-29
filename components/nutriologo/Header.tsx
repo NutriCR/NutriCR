@@ -16,7 +16,7 @@ interface NutriHeaderProps {
 
 export default function NutriHeader({ onToggle }: NutriHeaderProps) {
   const pathname = usePathname();
-  const title    = pageTitles[pathname] ?? 'NutriCR';
+  const title    = pageTitles[pathname] ?? 'Nutri Smart CR';
 
   return (
     <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-4 flex items-center gap-3 flex-shrink-0">

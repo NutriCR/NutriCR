@@ -6,7 +6,7 @@ import ServiceWorkerUpdater from '@/components/ServiceWorkerUpdater';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'NutriCR',
+  title: 'Nutri Smart CR',
   description: 'Plataforma de nutrición personalizada con IA',
   manifest: '/manifest.json',
   // appleWebApp.capable genera <meta name="apple-mobile-web-app-capable">
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'NutriCR',
+    title: 'Nutri Smart CR',
   },
   icons: {
     icon: '/icons/icon-192x192.png',

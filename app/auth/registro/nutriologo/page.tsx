@@ -133,11 +133,11 @@ export default function RegistroNutriologoPage() {
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
               <span className="text-white text-sm font-bold">N</span>
             </div>
-            <span className="text-sm font-bold text-brand-700">NutriCR</span>
+            <span className="text-sm font-bold text-brand-700">Nutri Smart CR</span>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Nutriólogo</h2>
-          <p className="text-slate-400 text-sm mb-6">Crea tu cuenta profesional en NutriCR.</p>
+          <p className="text-slate-400 text-sm mb-6">Crea tu cuenta profesional en Nutri Smart CR.</p>
 
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">

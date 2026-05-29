@@ -1,4 +1,4 @@
-# NutriCR
+# Nutri Smart CR
 
 Plataforma de nutrición personalizada con IA para Costa Rica. Conecta nutriólogos con sus pacientes a través de planes nutricionales inteligentes generados con Claude.
 

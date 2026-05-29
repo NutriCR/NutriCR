@@ -176,7 +176,7 @@ export default function RegistroPacientePage() {
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
               <span className="text-white text-sm font-bold">N</span>
             </div>
-            <span className="text-sm font-bold text-brand-700">NutriCR</span>
+            <span className="text-sm font-bold text-brand-700">Nutri Smart CR</span>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Registro — Paciente</h2>
