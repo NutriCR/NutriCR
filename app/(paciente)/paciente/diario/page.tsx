@@ -16,18 +16,59 @@ function formatFecha(iso: string) {
   });
 }
 
+// ─── Conversión a JPEG via canvas ─────────────────────────────────────────────
+// Convierte cualquier formato (HEIC, HEIF, PNG, WEBP, JPG, …) a un Blob JPEG.
+// iOS puede mostrar HEIC en <img> de forma nativa, así que la carga funciona
+// en Safari; canvas luego exporta el contenido como JPEG estándar.
+async function toJpegBlob(file: File): Promise<Blob> {
+  // 1. Cargar el archivo en un elemento <img>
+  const objectUrl = URL.createObjectURL(file);
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload  = () => resolve(el);
+    el.onerror = () => reject(new Error('No se pudo decodificar la imagen'));
+    el.src = objectUrl;
+  }).finally(() => URL.revokeObjectURL(objectUrl));
+
+  if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+    throw new Error('La imagen no tiene dimensiones válidas');
+  }
+
+  // 2. Dibujar en canvas
+  const canvas = document.createElement('canvas');
+  canvas.width  = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas no disponible en este dispositivo');
+  ctx.drawImage(img, 0, 0);
+
+  // 3. Exportar como JPEG (calidad 0.85 — buen balance tamaño / nitidez)
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => blob
+        ? resolve(blob)
+        : reject(new Error('Error al generar el JPEG desde canvas')),
+      'image/jpeg',
+      0.85,
+    );
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function DiarioPage() {
-  // Two separate refs: one forces camera, one opens file picker / gallery
   const cameraInputRef  = useRef<HTMLInputElement>(null);
   const galeriaInputRef = useRef<HTMLInputElement>(null);
 
-  const [preview, setPreview]     = useState<string | null>(null);
-  const [file, setFile]           = useState<File | null>(null);
-  const [descripcion, setDesc]    = useState('');
-  const [subiendo, setSubiendo]   = useState(false);
-  const [errorMsg, setErrorMsg]   = useState<string | null>(null);
-  const [historial, setHistorial] = useState<EntradaDiario[]>([]);
-  const [cargando, setCargando]   = useState(true);
+  const [preview,      setPreview]      = useState<string | null>(null);
+  const [blob,         setBlob]         = useState<Blob | null>(null);   // JPEG listo para subir
+  const [descripcion,  setDesc]         = useState('');
+  const [convirtiendo, setConvirtiendo] = useState(false);  // procesando HEIC → JPEG
+  const [subiendo,     setSubiendo]     = useState(false);
+  const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
+  const [historial,    setHistorial]    = useState<EntradaDiario[]>([]);
+  const [cargando,     setCargando]     = useState(true);
   const [fotoAmpliada, setFotoAmpliada] = useState<EntradaDiario | null>(null);
 
   // ── Cargar historial ────────────────────────────────────────────────────────
@@ -44,8 +85,8 @@ export default function DiarioPage() {
 
   useEffect(() => { cargarHistorial(); }, []);
 
-  // ── Seleccionar archivo ─────────────────────────────────────────────────────
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // ── Seleccionar archivo → convertir a JPEG ──────────────────────────────────
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (!selected) return;
 
@@ -54,32 +95,44 @@ export default function DiarioPage() {
       return;
     }
 
-    setFile(selected);
     setErrorMsg(null);
-    const reader = new FileReader();
-    reader.onloadend = () => setPreview(reader.result as string);
-    reader.readAsDataURL(selected);
+    setConvirtiendo(true);
+
+    try {
+      const jpeg = await toJpegBlob(selected);
+      setBlob(jpeg);
+
+      // Generar preview a partir del JPEG convertido
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(jpeg);
+    } catch (err) {
+      setErrorMsg('No se pudo procesar la imagen. Intenta con otra foto.');
+      console.error('[diario] toJpegBlob:', err);
+    } finally {
+      setConvirtiendo(false);
+    }
   }
 
   function cancelarPreview() {
     setPreview(null);
-    setFile(null);
+    setBlob(null);
     setDesc('');
     setErrorMsg(null);
-    // Clear both inputs so the same file can be re-selected
     if (cameraInputRef.current)  cameraInputRef.current.value  = '';
     if (galeriaInputRef.current) galeriaInputRef.current.value = '';
   }
 
-  // ── Subir foto ─────────────────────────────────────────────────────────────
+  // ── Subir foto (ya convertida a JPEG) ──────────────────────────────────────
   async function handleSubir() {
-    if (!file) return;
+    if (!blob) return;
     setSubiendo(true);
     setErrorMsg(null);
 
     try {
       const fd = new FormData();
-      fd.append('file', file);
+      // Nombre siempre .jpg; el blob ya es image/jpeg
+      fd.append('file', blob, 'foto.jpg');
       if (descripcion.trim()) fd.append('descripcion', descripcion.trim());
 
       const res  = await fetch('/api/diario', { method: 'POST', body: fd });
@@ -90,7 +143,6 @@ export default function DiarioPage() {
         return;
       }
 
-      // Agregar al inicio del historial y limpiar preview
       setHistorial((prev) => [json.data, ...prev].slice(0, 10));
       cancelarPreview();
     } catch {
@@ -108,11 +160,25 @@ export default function DiarioPage() {
       </div>
 
       {/* ── Zona de captura ── */}
-      {!preview ? (
+      {convirtiendo ? (
+
+        /* ── Procesando imagen (HEIC → JPEG) ── */
+        <div className="border-2 border-dashed border-brand-200 rounded-2xl bg-brand-50 flex flex-col items-center justify-center gap-3 py-12">
+          <svg className="animate-spin h-8 w-8 text-brand-400" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          <p className="text-sm font-medium text-brand-600">Procesando imagen…</p>
+          <p className="text-xs text-brand-400">Convirtiendo a JPEG</p>
+        </div>
+
+      ) : !preview ? (
+
+        /* ── Botones de captura ── */
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-3">
 
-            {/* ── Botón: Tomar foto (abre cámara directamente) ── */}
+            {/* Tomar foto */}
             <div
               role="button"
               tabIndex={0}
@@ -135,7 +201,7 @@ export default function DiarioPage() {
               />
             </div>
 
-            {/* ── Botón: Elegir de galería (abre el selector de archivos) ── */}
+            {/* Elegir de galería */}
             <div
               role="button"
               tabIndex={0}
@@ -158,7 +224,14 @@ export default function DiarioPage() {
             </div>
 
           </div>
-          <p className="text-center text-[11px] text-slate-300">JPG · PNG · HEIC — máximo 10 MB</p>
+
+          {errorMsg && (
+            <p className="text-xs text-red-500 flex items-center gap-1">
+              <span>⚠️</span> {errorMsg}
+            </p>
+          )}
+
+          <p className="text-center text-[11px] text-slate-300">JPG · PNG · HEIC · WEBP — máximo 10 MB</p>
         </div>
 
       ) : (
