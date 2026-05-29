@@ -72,9 +72,13 @@ export default function PacienteHeader() {
 
   return (
     <>
-      <header className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <header className="relative bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <span className="font-bold text-brand-700">Nutri Smart CR</span>
-        <h1 className="font-semibold text-slate-700 text-sm">{title}</h1>
+
+        {/* Título centrado en pantalla — absolute para no verse afectado por los anchos laterales */}
+        <h1 className="absolute inset-x-0 text-center font-semibold text-slate-700 text-sm pointer-events-none">
+          {title}
+        </h1>
 
         {/* Campana de notificaciones */}
         <button
