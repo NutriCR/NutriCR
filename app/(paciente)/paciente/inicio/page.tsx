@@ -55,8 +55,9 @@ interface InicioData {
   diarioFechas:    string[];       // ISO timestamps del diario (últimos 30 días)
   tipoComida:      TipoComida;
   paciente:        { nombre: string; apellido: string | null };
-  recetasSemana:   number;         // recetas generadas en los últimos 7 días
-  escaneosSemana:  number;         // escaneos de tiquete en los últimos 7 días
+  recetasSemana:        number;         // recetas generadas en los últimos 7 días
+  escaneosSemana:       number;         // escaneos de tiquete en los últimos 7 días
+  pacienteRegistradoEn: string | null;  // ISO timestamp del registro del paciente
 }
 
 type Metrica = 'peso' | 'grasa' | 'musculo';
@@ -113,22 +114,20 @@ function toDateKey(d: Date): string {
   return d.toLocaleDateString('en-CA'); // 'en-CA' → YYYY-MM-DD
 }
 
-/** Lunes de la semana actual (hora local). */
-function getMondayOfWeek(today: Date): Date {
-  const d = new Date(today);
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay(); // 0=Dom … 6=Sáb
-  const diff = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
+// Abreviaciones de día (índice = getDay(), 0=Dom … 6=Sáb)
+const DAY_ABBREV = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
 
-/** Los 7 días de la semana actual (Lun–Dom). */
-function getWeekDays(today: Date): Date[] {
-  const monday = getMondayOfWeek(today);
+/**
+ * Los últimos 7 días terminando en hoy (del más antiguo al más reciente).
+ * Siempre son exactamente 7 días; el filtro de pre-registro se aplica en otro
+ * lugar para no romper el layout de 7 puntos.
+ */
+function getLast7Days(today: Date): Date[] {
+  const base = new Date(today);
+  base.setHours(0, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(base);
+    d.setDate(base.getDate() - (6 - i)); // [hoy-6, hoy-5, …, hoy]
     return d;
   });
 }
@@ -150,9 +149,16 @@ function calcStreak(diarioFechasSet: Set<string>, today: Date): number {
   return streak;
 }
 
-/** Adherencia 0-100 con la fórmula 80/10/10. */
-function calcAdherenciaPct(fotosUnicos: number, recetasCount: number, escaneosCount: number): number {
-  const fotos    = (Math.min(fotosUnicos,   7) / 7) * 80;
+/** Adherencia 0-100 con la fórmula 80/10/10.
+ *  `diasActivos` ajusta el denominador de fotos al período real del paciente (1-7). */
+function calcAdherenciaPct(
+  fotosUnicos:  number,
+  diasActivos:  number,
+  recetasCount: number,
+  escaneosCount: number,
+): number {
+  const denom    = Math.max(1, Math.min(diasActivos, 7));
+  const fotos    = (Math.min(fotosUnicos,  denom) / denom) * 80;
   const recetas  = (Math.min(recetasCount,  3) / 3) * 10;
   const escaneos =  Math.min(escaneosCount, 1)       * 10;
   return Math.round(fotos + recetas + escaneos);
@@ -312,9 +318,29 @@ export default function InicioPage() {
   const { unit, color } = METRICA[metrica];
 
   // ── Adherencia semanal ──────────────────────────────────────────────────────
-  const today          = useMemo(() => new Date(), []);
-  const todayKey       = useMemo(() => toDateKey(today), [today]);
-  const weekDays       = useMemo(() => getWeekDays(today), [today]);
+  const today    = useMemo(() => new Date(), []);
+  const todayKey = useMemo(() => toDateKey(today), [today]);
+
+  // Fecha de registro del paciente (null hasta que carguen los datos)
+  const registradoEn = useMemo(
+    () => data?.pacienteRegistradoEn ? new Date(data.pacienteRegistradoEn) : null,
+    [data?.pacienteRegistradoEn],
+  );
+  // Clave YYYY-MM-DD del día de registro (para comparar con toDateKey)
+  const regKey = useMemo(
+    () => registradoEn ? toDateKey(registradoEn) : null,
+    [registradoEn],
+  );
+
+  // Siempre 7 días: [hoy-6, hoy-5, …, hoy]
+  const last7Days = useMemo(() => getLast7Days(today), [today]);
+
+  // Días activos = cuántos de los 7 son ≥ fecha de registro (1-7)
+  const diasActivos = useMemo(() => {
+    if (!regKey) return 7;
+    return last7Days.filter((d) => toDateKey(d) >= regKey).length;
+  }, [last7Days, regKey]);
+
   const diarioFechasSet = useMemo(() => {
     const set = new Set<string>();
     (data?.diarioFechas ?? []).forEach((iso) =>
@@ -322,27 +348,31 @@ export default function InicioPage() {
     );
     return set;
   }, [data?.diarioFechas]);
+
   const streak = useMemo(
     () => calcStreak(diarioFechasSet, today),
     [diarioFechasSet, today],
   );
 
-  // Días únicos con foto esta semana (para el score de adherencia)
+  // Días únicos con foto en la ventana activa (excluye días pre-registro)
   const fotosUnicasSemana = useMemo(() => {
     let count = 0;
-    for (const day of weekDays) {
-      if (toDateKey(day) <= todayKey && diarioFechasSet.has(toDateKey(day))) count++;
+    for (const day of last7Days) {
+      const k = toDateKey(day);
+      if (regKey && k < regKey) continue; // día previo al registro → no cuenta
+      if (diarioFechasSet.has(k)) count++;
     }
     return count;
-  }, [weekDays, todayKey, diarioFechasSet]);
+  }, [last7Days, regKey, diarioFechasSet]);
 
   const adherenciaPct = useMemo(
     () => calcAdherenciaPct(
       fotosUnicasSemana,
+      diasActivos,
       data?.recetasSemana  ?? 0,
       data?.escaneosSemana ?? 0,
     ),
-    [fotosUnicasSemana, data?.recetasSemana, data?.escaneosSemana],
+    [fotosUnicasSemana, diasActivos, data?.recetasSemana, data?.escaneosSemana],
   );
 
   // ── Notificaciones visibles (filtramos las ya marcadas en esta sesión) ──────
@@ -630,41 +660,43 @@ export default function InicioPage() {
           </div>
         ) : (
           <>
-            {/* Puntos semanales */}
+            {/* Puntos semanales — últimos 7 días; pre-registro en gris claro */}
             <div className="flex justify-between">
-              {weekDays.map((day, i) => {
-                const key      = toDateKey(day);
-                const isFuture = key > todayKey;
-                const isToday  = key === todayKey;
-                const hasLog   = diarioFechasSet.has(key);
+              {last7Days.map((day, i) => {
+                const key           = toDateKey(day);
+                const isPreRegistro = regKey !== null && key < regKey;
+                const isToday       = key === todayKey;
+                const hasLog        = !isPreRegistro && diarioFechasSet.has(key);
 
                 return (
                   <div key={i} className="flex flex-col items-center gap-1.5">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                        isFuture
-                          ? 'bg-slate-100'
+                        isPreRegistro
+                          ? 'bg-slate-50 border border-dashed border-slate-200'
                           : hasLog
                           ? 'bg-green-500 shadow-sm shadow-green-200'
                           : 'bg-slate-200'
                       } ${isToday ? 'ring-2 ring-offset-1 ring-brand-400' : ''}`}
                     >
-                      {!isFuture && hasLog && (
+                      {isPreRegistro ? (
+                        <span className="text-[9px] text-slate-300 leading-none">—</span>
+                      ) : hasLog ? (
                         <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-5.121-5.121a1 1 0 111.414-1.414L8.414 12.172l6.879-6.879a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
-                      )}
+                      ) : null}
                     </div>
                     <span
                       className={`text-[10px] font-semibold ${
-                        isToday
+                        isPreRegistro
+                          ? 'text-slate-200'
+                          : isToday
                           ? 'text-brand-600'
-                          : isFuture
-                          ? 'text-slate-300'
                           : 'text-slate-400'
                       }`}
                     >
-                      {['L','M','M','J','V','S','D'][i]}
+                      {DAY_ABBREV[day.getDay()]}
                     </span>
                   </div>
                 );
@@ -690,7 +722,7 @@ export default function InicioPage() {
               <span>
                 📸 Fotos&nbsp;
                 <span className={fotosUnicasSemana > 0 ? 'text-green-600 font-semibold' : ''}>
-                  {fotosUnicasSemana}/7
+                  {fotosUnicasSemana}/{diasActivos}
                 </span>
               </span>
               <span>

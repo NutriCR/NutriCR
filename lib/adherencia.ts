@@ -10,9 +10,17 @@
 //   'Urgente' → adherencia < 40  O  sin foto en los últimos 3 días
 
 export interface AdherenciaInput {
-  fotosUnicos:   number; // días únicos con entradas en diario_comidas (últimos 7 d)
+  fotosUnicos:   number; // días únicos con entradas en diario_comidas (ventana activa)
   recetasCount:  number; // recetas_generadas en últimos 7 días
   escaneosCount: number; // filas en inventario con paciente_id en últimos 7 días
+  /**
+   * Número de días que el paciente lleva activo en la ventana (1-7).
+   * = min(7, daysSinceRegistration + 1)
+   * Paciente registrado hoy → 1. Registrado hace ≥6 días → 7.
+   * Se usa como denominador real para el componente de fotos, evitando
+   * penalizar a pacientes nuevos por días que aún no han vivido.
+   */
+  diasActivos:   number;
 }
 
 export type EstadoAdherencia = 'Al día' | 'Revisar' | 'Urgente';
@@ -22,8 +30,10 @@ export function calcAdherencia({
   fotosUnicos,
   recetasCount,
   escaneosCount,
+  diasActivos,
 }: AdherenciaInput): number {
-  const fotos    = (Math.min(fotosUnicos,   7) / 7) * 80;
+  const denom    = Math.max(1, Math.min(diasActivos, 7));
+  const fotos    = (Math.min(fotosUnicos,  denom) / denom) * 80;
   const recetas  = (Math.min(recetasCount,  3) / 3) * 10;
   const escaneos =  Math.min(escaneosCount, 1)       * 10;
   return Math.round(fotos + recetas + escaneos);

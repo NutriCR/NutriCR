@@ -45,6 +45,7 @@ export async function GET() {
     usuarioRes,
     recetasSemanaRes,
     /* placeholder for escaneos */,
+    pacienteRegRes,
   ] = await Promise.all([
 
     // Últimas 12 mediciones, orden ascendente para la gráfica
@@ -107,6 +108,13 @@ export async function GET() {
 
     // Placeholder — escaneos se obtienen por separado (requiere migración en BD)
     Promise.resolve({ count: 0 }),
+
+    // Fecha de registro del paciente — para calcular diasActivos en el cliente
+    admin
+      .from('pacientes')
+      .select('created_at')
+      .eq('id', pacienteId)
+      .maybeSingle(),
   ]);
 
   // Escaneos de tiquete: query separada hasta que se aplique la migración de paciente_id
@@ -138,7 +146,9 @@ export async function GET() {
       apellido: usuarioRes.data?.apellido ?? null,
     },
     // Componentes de adherencia para mostrar desglose en pantalla de inicio
-    recetasSemana:  recetasSemanaRes.count ?? 0,
-    escaneosSemana: escaneosRaw.count      ?? 0,
+    recetasSemana:      recetasSemanaRes.count             ?? 0,
+    escaneosSemana:     escaneosRaw.count                  ?? 0,
+    // Fecha de registro — el cliente la usa para calcular diasActivos
+    pacienteRegistradoEn: pacienteRegRes.data?.created_at  ?? null,
   });
 }

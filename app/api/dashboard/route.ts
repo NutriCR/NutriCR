@@ -26,7 +26,7 @@ export async function GET() {
     // 3. Pacientes del nutriólogo
     const { data: pacientesRaw, error: pacErr } = await supabase
       .from('pacientes')
-      .select('id, usuario_id, objetivo')
+      .select('id, usuario_id, objetivo, created_at')
       .eq('nutriologo_id', nutriologoId);
 
     if (pacErr) throw new Error(pacErr.message);
@@ -153,16 +153,23 @@ export async function GET() {
     const usuariosMap = new Map((usuariosRes.data ?? []).map((u) => [u.id, u]));
 
     // 11. Construir lista de pacientes
+    const now = Date.now();
     const pacientes = pacientesRaw.map((p) => {
       const usuario      = usuariosMap.get(p.usuario_id);
       const fotosUnicos  = fotosDiasMap.get(p.id)?.size ?? 0;
       const recetasCount = recetasCountMap.get(p.id) ?? 0;
       const escaneosCount = escaneosCountMap.get(p.id) ?? 0;
 
-      const ultimaFoto = ultimaFotoMap.get(p.id) ?? null;
-      const sinFotoReciente = !ultimaFoto || ultimaFoto < threeDaysAgo;
+      // Días desde registro (0 si registrado hoy) → denominador real de fotos
+      const daysSinceReg = Math.floor((now - new Date(p.created_at).getTime()) / 86_400_000);
+      const diasActivos  = Math.min(7, daysSinceReg + 1); // +1: el día de registro cuenta
 
-      const adherencia = calcAdherencia({ fotosUnicos, recetasCount, escaneosCount });
+      const ultimaFoto = ultimaFotoMap.get(p.id) ?? null;
+      // Solo "sin foto reciente" si han pasado ≥ 3 días desde el registro;
+      // un paciente nuevo que aún no sube su primera foto no es "Urgente".
+      const sinFotoReciente = daysSinceReg >= 3 && (!ultimaFoto || ultimaFoto < threeDaysAgo);
+
+      const adherencia = calcAdherencia({ fotosUnicos, recetasCount, escaneosCount, diasActivos });
       const estado     = calcEstado(adherencia, sinFotoReciente);
 
       // Última actividad: la más reciente entre foto y receta
