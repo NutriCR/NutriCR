@@ -121,7 +121,7 @@ function Header({ scrolled }: { scrolled: boolean }) {
           />
           <span
             className={cn(
-              'text-xl font-bold tracking-tight transition-colors duration-300',
+              'text-2xl font-bold tracking-tight transition-colors duration-300',
               scrolled ? 'text-brand-700' : 'text-white drop-shadow',
             )}
           >
