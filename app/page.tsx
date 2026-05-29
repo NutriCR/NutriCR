@@ -115,14 +115,14 @@ function Header({ scrolled }: { scrolled: boolean }) {
           <img
             src="/icons/icon-192x192.png"
             alt="Nutri Smart CR"
-            width={48}
-            height={48}
+            width={52}
+            height={52}
             className="rounded-xl flex-shrink-0 shadow-sm"
           />
           <span
             className={cn(
-              'text-base font-bold tracking-tight transition-colors duration-300',
-              scrolled ? 'text-brand-700' : 'text-slate-800',
+              'text-xl font-bold tracking-tight transition-colors duration-300',
+              scrolled ? 'text-brand-700' : 'text-white drop-shadow',
             )}
           >
             Nutri Smart CR
