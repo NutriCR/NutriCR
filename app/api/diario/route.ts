@@ -96,9 +96,9 @@ export async function POST(request: Request) {
     if (uploadErr) {
       console.error('[diario] POST — upload error completo:', {
         message:    uploadErr.message,
-        statusCode: (uploadErr as Record<string, unknown>).statusCode,
-        error:      (uploadErr as Record<string, unknown>).error,
-        cause:      (uploadErr as Record<string, unknown>).cause,
+        statusCode: (uploadErr as unknown as Record<string, unknown>).statusCode,
+        error:      (uploadErr as unknown as Record<string, unknown>).error,
+        cause:      (uploadErr as unknown as Record<string, unknown>).cause,
       });
       return NextResponse.json(
         { error: `Error al subir la imagen: ${uploadErr.message}` },
