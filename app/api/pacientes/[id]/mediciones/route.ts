@@ -22,6 +22,7 @@ export async function GET(
 
 // ── POST /api/pacientes/[id]/mediciones ───────────────────────────────────────
 // Inserta una nueva medición InBody.
+// Campos opcionales: masa_osea (kg), grasa_visceral (entero 1-20).
 
 export async function POST(
   request: Request,
@@ -29,18 +30,30 @@ export async function POST(
 ) {
   const supabase = createAdminClient();
   const body = await request.json() as {
-    fecha:            string;
-    peso?:            number | null;
-    grasa_porcentaje?: number | null;
-    musculo_kg?:      number | null;
-    agua_porcentaje?: number | null;
+    fecha:              string;
+    peso?:              number | null;
+    grasa_porcentaje?:  number | null;
+    musculo_kg?:        number | null;
+    agua_porcentaje?:   number | null;
+    masa_osea?:         number | null;
+    grasa_visceral?:    number | null;
   };
 
   if (!body.fecha) {
     return NextResponse.json({ error: 'fecha es requerida' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  // Validar grasa_visceral: 1-20 si viene
+  if (body.grasa_visceral != null) {
+    const gv = Math.round(body.grasa_visceral);
+    if (gv < 1 || gv > 20) {
+      return NextResponse.json({ error: 'grasa_visceral debe estar entre 1 y 20' }, { status: 400 });
+    }
+    body.grasa_visceral = gv;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from('mediciones_inbody')
     .insert({
       paciente_id:      params.id,
@@ -49,6 +62,8 @@ export async function POST(
       grasa_porcentaje: body.grasa_porcentaje ?? null,
       musculo_kg:       body.musculo_kg       ?? null,
       agua_porcentaje:  body.agua_porcentaje  ?? null,
+      masa_osea:        body.masa_osea        ?? null,
+      grasa_visceral:   body.grasa_visceral   ?? null,
     })
     .select()
     .single();

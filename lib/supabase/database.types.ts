@@ -461,6 +461,8 @@ export interface Database {
           grasa_porcentaje: number | null;
           musculo_kg: number | null;
           agua_porcentaje: number | null;
+          masa_osea: number | null;
+          grasa_visceral: number | null;
           created_at: string;
         };
         Insert: {
@@ -471,6 +473,8 @@ export interface Database {
           grasa_porcentaje?: number | null;
           musculo_kg?: number | null;
           agua_porcentaje?: number | null;
+          masa_osea?: number | null;
+          grasa_visceral?: number | null;
           created_at?: string;
         };
         Update: {
@@ -481,6 +485,8 @@ export interface Database {
           grasa_porcentaje?: number | null;
           musculo_kg?: number | null;
           agua_porcentaje?: number | null;
+          masa_osea?: number | null;
+          grasa_visceral?: number | null;
         };
         Relationships: [
           {

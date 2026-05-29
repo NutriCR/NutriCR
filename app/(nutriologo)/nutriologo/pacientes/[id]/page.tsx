@@ -33,13 +33,24 @@ const RESTRICCIONES_OPCIONES = [
 ];
 
 const METRICAS = [
-  { key: 'grasa_porcentaje', label: '% Grasa',  color: '#ef4444', axis: 'left',  unit: '%'  },
-  { key: 'agua_porcentaje',  label: '% Agua',   color: '#3b82f6', axis: 'left',  unit: '%'  },
-  { key: 'musculo_kg',       label: 'Músculo',  color: '#10b981', axis: 'right', unit: 'kg' },
-  { key: 'peso',             label: 'Peso',     color: '#8b5cf6', axis: 'right', unit: 'kg' },
+  { key: 'grasa_porcentaje', label: '% Grasa',      color: '#ef4444', axis: 'left',  unit: '%'  },
+  { key: 'agua_porcentaje',  label: '% Agua',        color: '#3b82f6', axis: 'left',  unit: '%'  },
+  { key: 'musculo_kg',       label: 'Músculo',       color: '#10b981', axis: 'right', unit: 'kg' },
+  { key: 'peso',             label: 'Peso',          color: '#8b5cf6', axis: 'right', unit: 'kg' },
+  { key: 'masa_osea',        label: 'Masa ósea',     color: '#f59e0b', axis: 'right', unit: 'kg' },
 ] as const;
 
 type MetricaKey = (typeof METRICAS)[number]['key'];
+
+// Todos los campos InBody — usados en el tooltip para mostrar TODOS los valores del punto
+const INBODY_FIELDS: { key: keyof MedicionInbody; label: string; unit: string; color: string }[] = [
+  { key: 'peso',             label: 'Peso total',     unit: ' kg', color: '#8b5cf6' },
+  { key: 'grasa_porcentaje', label: '% Grasa',        unit: '%',   color: '#ef4444' },
+  { key: 'musculo_kg',       label: 'Masa muscular',  unit: ' kg', color: '#10b981' },
+  { key: 'agua_porcentaje',  label: '% Agua',         unit: '%',   color: '#3b82f6' },
+  { key: 'masa_osea',        label: 'Masa ósea',      unit: ' kg', color: '#f59e0b' },
+  { key: 'grasa_visceral',   label: 'Grasa visceral', unit: '',    color: '#ec4899' },
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +84,8 @@ interface MedicionInbody {
   grasa_porcentaje: number | null;
   musculo_kg: number | null;
   agua_porcentaje: number | null;
+  masa_osea: number | null;
+  grasa_visceral: number | null;
 }
 
 interface Nota {
@@ -108,10 +121,10 @@ const MOCK_PACIENTE: PacienteDetalle = {
 };
 
 const MOCK_MEDICIONES: MedicionInbody[] = [
-  { id: 'm1', paciente_id: 'mock-detalle', fecha: '2025-02-15', peso: 74.2, grasa_porcentaje: 33.5, musculo_kg: 27.8, agua_porcentaje: 50.5 },
-  { id: 'm2', paciente_id: 'mock-detalle', fecha: '2025-03-10', peso: 72.1, grasa_porcentaje: 31.8, musculo_kg: 28.3, agua_porcentaje: 52.1 },
-  { id: 'm3', paciente_id: 'mock-detalle', fecha: '2025-04-05', peso: 70.5, grasa_porcentaje: 30.2, musculo_kg: 28.9, agua_porcentaje: 53.4 },
-  { id: 'm4', paciente_id: 'mock-detalle', fecha: '2025-05-01', peso: 68.8, grasa_porcentaje: 28.5, musculo_kg: 29.4, agua_porcentaje: 55.0 },
+  { id: 'm1', paciente_id: 'mock-detalle', fecha: '2025-02-15', peso: 74.2, grasa_porcentaje: 33.5, musculo_kg: 27.8, agua_porcentaje: 50.5, masa_osea: 2.4, grasa_visceral: 9  },
+  { id: 'm2', paciente_id: 'mock-detalle', fecha: '2025-03-10', peso: 72.1, grasa_porcentaje: 31.8, musculo_kg: 28.3, agua_porcentaje: 52.1, masa_osea: 2.4, grasa_visceral: 8  },
+  { id: 'm3', paciente_id: 'mock-detalle', fecha: '2025-04-05', peso: 70.5, grasa_porcentaje: 30.2, musculo_kg: 28.9, agua_porcentaje: 53.4, masa_osea: 2.5, grasa_visceral: 7  },
+  { id: 'm4', paciente_id: 'mock-detalle', fecha: '2025-05-01', peso: 68.8, grasa_porcentaje: 28.5, musculo_kg: 29.4, agua_porcentaje: 55.0, masa_osea: 2.5, grasa_visceral: 6  },
 ];
 
 const MOCK_PLAN: PlanNutricional = {
@@ -228,6 +241,8 @@ function ModalMedicion({
     grasa_porcentaje: '',
     musculo_kg:       '',
     agua_porcentaje:  '',
+    masa_osea:        '',
+    grasa_visceral:   '',
   });
 
   function handleChange(k: keyof typeof form, v: string) {
@@ -236,22 +251,36 @@ function ModalMedicion({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const gv = form.grasa_visceral ? parseInt(form.grasa_visceral, 10) : null;
     onGuardar({
       fecha:            form.fecha,
       peso:             form.peso             ? parseFloat(form.peso)             : null,
       grasa_porcentaje: form.grasa_porcentaje ? parseFloat(form.grasa_porcentaje) : null,
       musculo_kg:       form.musculo_kg       ? parseFloat(form.musculo_kg)       : null,
       agua_porcentaje:  form.agua_porcentaje  ? parseFloat(form.agua_porcentaje)  : null,
+      masa_osea:        form.masa_osea        ? parseFloat(form.masa_osea)        : null,
+      grasa_visceral:   gv !== null && gv >= 1 && gv <= 20 ? gv : null,
     });
   }
 
-  const field = (label: string, key: keyof typeof form, unit: string, placeholder: string) => (
+  const field = (
+    label: string,
+    key: keyof typeof form,
+    unit: string,
+    placeholder: string,
+    opts?: { optional?: boolean; min?: number; max?: number; step?: string },
+  ) => (
     <div>
-      <label className="block text-xs font-semibold text-slate-500 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+        {label}
+        {opts?.optional && <span className="ml-1 font-normal text-slate-400">(opcional)</span>}
+      </label>
       <div className="relative">
         <input
           type={key === 'fecha' ? 'date' : 'number'}
-          step="0.1"
+          step={opts?.step ?? '0.1'}
+          min={opts?.min}
+          max={opts?.max}
           value={form[key]}
           onChange={(e) => handleChange(key, e.target.value)}
           placeholder={placeholder}
@@ -271,24 +300,42 @@ function ModalMedicion({
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">Agregar medición InBody</h3>
+            <h3 className="text-lg font-bold text-slate-800">Nueva medición InBody</h3>
             <p className="text-xs text-slate-400 mt-0.5">Todos los campos son opcionales excepto la fecha</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 text-xl">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {field('Fecha', 'fecha', '', '')}
-          <div className="grid grid-cols-2 gap-4">
-            {field('Peso total',     'peso',             'kg', '70.5')}
-            {field('% Grasa',        'grasa_porcentaje', '%',  '28.5')}
-            {field('Masa muscular',  'musculo_kg',       'kg', '29.4')}
-            {field('% Agua corporal','agua_porcentaje',  '%',  '55.0')}
+        {/* Body con scroll */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+          {field('Fecha de medición', 'fecha', '', '')}
+
+          {/* Campos principales */}
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Composición corporal</p>
+            <div className="grid grid-cols-2 gap-3">
+              {field('Peso',            'peso',             'kg', '70.5')}
+              {field('% Grasa',         'grasa_porcentaje', '%',  '28.5')}
+              {field('Masa muscular',   'musculo_kg',       'kg', '29.4')}
+              {field('% Agua corporal', 'agua_porcentaje',  '%',  '55.0')}
+            </div>
           </div>
 
+          {/* Campos opcionales */}
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Campos adicionales</p>
+            <div className="grid grid-cols-2 gap-3">
+              {field('Masa ósea',       'masa_osea',       'kg', '2.5', { optional: true })}
+              {field('Grasa visceral',  'grasa_visceral',  '',   '8',   { optional: true, step: '1', min: 1, max: 20 })}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2">Grasa visceral: valor entre 1 y 20 (escala InBody)</p>
+          </div>
+
+          {/* Acciones */}
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
@@ -312,12 +359,8 @@ function ModalMedicion({
 }
 
 // ─── Custom tooltip para recharts ─────────────────────────────────────────────
-
-interface ChartPayloadEntry {
-  name: string;
-  value: number;
-  color: string;
-}
+// Muestra TODOS los valores del punto (incluyendo campos no graficados),
+// independientemente de qué líneas estén visibles en ese momento.
 
 function CustomTooltip({
   active,
@@ -325,21 +368,27 @@ function CustomTooltip({
   label,
 }: {
   active?: boolean;
-  payload?: ChartPayloadEntry[];
+  payload?: { payload: MedicionInbody }[];
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const campos = INBODY_FIELDS.filter((f) => d[f.key] != null);
+  if (!campos.length) return null;
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs space-y-1">
-      <p className="font-semibold text-slate-600 mb-1.5">{label}</p>
-      {payload.map((entry) => {
-        const cfg = METRICAS.find((m) => m.key === entry.name);
-        return (
-          <p key={entry.name} style={{ color: entry.color }} className="font-medium">
-            {cfg?.label ?? entry.name}: {entry.value}{cfg?.unit ?? ''}
-          </p>
-        );
-      })}
+    <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[168px]">
+      <p className="font-bold text-slate-700 mb-2">{label}</p>
+      <div className="space-y-1">
+        {campos.map((f) => (
+          <div key={f.key} className="flex items-center justify-between gap-4">
+            <span className="text-slate-500">{f.label}</span>
+            <span className="font-semibold" style={{ color: f.color }}>
+              {d[f.key] as number}{f.unit}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
