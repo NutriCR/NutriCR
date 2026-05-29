@@ -159,7 +159,7 @@ export async function POST() {
         generada_por_ia: true,
         tipo_comida:     null,          // null = menú completo del día
         fecha:           hoy,
-        menu:            parsed.menu,
+        menu:            JSON.parse(JSON.stringify(parsed.menu)),
       });
 
     if (insertErr) {
