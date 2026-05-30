@@ -47,7 +47,9 @@
       "Bash(npm list *)",
       "Bash(sort -k5 -h)",
       "Bash(git -C /Users/macdejose/NutriCR add 'app/\\(paciente\\)/paciente/despensa/page.tsx' app/api/despensa/route.ts lib/supabase/database.types.ts lib/alimentos.ts supabase/migration_20250529_alimentos.sql)",
-      "Bash(git -C /Users/macdejose/NutriCR add 'app/\\(nutriologo\\)/nutriologo/inventario/page.tsx' app/api/alimentos/route.ts app/api/alimentos/[id]/route.ts app/api/alimentos/buscar-off/route.ts app/api/alimentos/importar/route.ts lib/alimentos.ts lib/supabase/database.types.ts supabase/migration_20250529_alimentos_validado.sql)"
+      "Bash(git -C /Users/macdejose/NutriCR add 'app/\\(nutriologo\\)/nutriologo/inventario/page.tsx' app/api/alimentos/route.ts app/api/alimentos/[id]/route.ts app/api/alimentos/buscar-off/route.ts app/api/alimentos/importar/route.ts lib/alimentos.ts lib/supabase/database.types.ts supabase/migration_20250529_alimentos_validado.sql)",
+      "Bash(git -C /Users/macdejose/NutriCR add next.config.js app/api/alimentos/importar/route.ts)",
+      "Bash(git -C /Users/macdejose/NutriCR push)"
     ]
   }
 }
