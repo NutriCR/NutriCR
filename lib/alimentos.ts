@@ -18,32 +18,34 @@ import { anthropic }         from '@/lib/anthropic/client';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DatosNutricionales {
-  id:           string;
-  nombre:       string;
-  codigoBarras: string | null;
-  calorias100g: number;
-  proteina100g: number;
-  carbos100g:   number;
-  grasas100g:   number;
-  fibra100g:    number | null;
-  fuente:       'openfoodfacts' | 'usda' | 'manual' | 'ia';
-  imagenUrl:    string | null;
+  id:             string;
+  nombre:         string;
+  nombreOriginal: string | null;   // nombre en inglés (USDA) antes de traducir
+  codigoBarras:   string | null;
+  calorias100g:   number;
+  proteina100g:   number;
+  carbos100g:     number;
+  grasas100g:     number;
+  fibra100g:      number | null;
+  fuente:         'openfoodfacts' | 'usda' | 'manual' | 'ia';
+  imagenUrl:      string | null;
 }
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 function mapRow(row: Record<string, unknown>): DatosNutricionales {
   return {
-    id:           String(row.id),
-    nombre:       String(row.nombre),
-    codigoBarras: (row.codigo_barras as string | null) ?? null,
-    calorias100g: Number(row.calorias_100g)  || 0,
-    proteina100g: Number(row.proteina_100g)  || 0,
-    carbos100g:   Number(row.carbos_100g)    || 0,
-    grasas100g:   Number(row.grasas_100g)    || 0,
-    fibra100g:    row.fibra_100g != null ? Number(row.fibra_100g) : null,
-    fuente:       (row.fuente as DatosNutricionales['fuente']) ?? 'manual',
-    imagenUrl:    (row.imagen_url as string | null) ?? null,
+    id:             String(row.id),
+    nombre:         String(row.nombre),
+    nombreOriginal: (row.nombre_original as string | null) ?? null,
+    codigoBarras:   (row.codigo_barras as string | null) ?? null,
+    calorias100g:   Number(row.calorias_100g)  || 0,
+    proteina100g:   Number(row.proteina_100g)  || 0,
+    carbos100g:     Number(row.carbos_100g)    || 0,
+    grasas100g:     Number(row.grasas_100g)    || 0,
+    fibra100g:      row.fibra_100g != null ? Number(row.fibra_100g) : null,
+    fuente:         (row.fuente as DatosNutricionales['fuente']) ?? 'manual',
+    imagenUrl:      (row.imagen_url as string | null) ?? null,
   };
 }
 
@@ -221,33 +223,34 @@ async function guardarAlimento(
   const { data, error } = await admin
     .from('alimentos')
     .insert({
-      nombre:        datos.nombre?.trim() || nombre.trim(),
-      codigo_barras: codigoBarras ?? null,
-      calorias_100g: datos.calorias100g ?? 0,
-      proteina_100g: datos.proteina100g ?? 0,
-      carbos_100g:   datos.carbos100g   ?? 0,
-      grasas_100g:   datos.grasas100g   ?? 0,
-      fibra_100g:    datos.fibra100g    ?? null,
-      fuente:        datos.fuente       ?? 'manual',
-      imagen_url:    datos.imagenUrl    ?? null,
+      nombre:          datos.nombre?.trim()         || nombre.trim(),
+      nombre_original: datos.nombreOriginal         ?? null,
+      codigo_barras:   codigoBarras                 ?? null,
+      calorias_100g:   datos.calorias100g           ?? 0,
+      proteina_100g:   datos.proteina100g           ?? 0,
+      carbos_100g:     datos.carbos100g             ?? 0,
+      grasas_100g:     datos.grasas100g             ?? 0,
+      fibra_100g:      datos.fibra100g              ?? null,
+      fuente:          datos.fuente                 ?? 'manual',
+      imagen_url:      datos.imagenUrl              ?? null,
     })
     .select('*')
     .single();
 
   if (error || !data) {
     console.error('[alimentos] insert falló:', error?.message);
-    // Devolver datos en memoria aunque no se guarden (no bloqueamos)
     return {
-      id:           '',
-      nombre:       datos.nombre?.trim() || nombre.trim(),
-      codigoBarras: codigoBarras ?? null,
-      calorias100g: datos.calorias100g ?? 0,
-      proteina100g: datos.proteina100g ?? 0,
-      carbos100g:   datos.carbos100g   ?? 0,
-      grasas100g:   datos.grasas100g   ?? 0,
-      fibra100g:    datos.fibra100g    ?? null,
-      fuente:       datos.fuente       ?? 'manual',
-      imagenUrl:    datos.imagenUrl    ?? null,
+      id:             '',
+      nombre:         datos.nombre?.trim()   || nombre.trim(),
+      nombreOriginal: datos.nombreOriginal   ?? null,
+      codigoBarras:   codigoBarras           ?? null,
+      calorias100g:   datos.calorias100g     ?? 0,
+      proteina100g:   datos.proteina100g     ?? 0,
+      carbos100g:     datos.carbos100g       ?? 0,
+      grasas100g:     datos.grasas100g       ?? 0,
+      fibra100g:      datos.fibra100g        ?? null,
+      fuente:         datos.fuente           ?? 'manual',
+      imagenUrl:      datos.imagenUrl        ?? null,
     };
   }
 
@@ -255,7 +258,41 @@ async function guardarAlimento(
   return mapRow(data as Record<string, unknown>);
 }
 
-// ─── 4b. USDA FoodData Central ───────────────────────────────────────────────
+// ─── 4b. Traducción de nombres (inglés → español) ────────────────────────────
+
+/**
+ * Traduce un nombre de alimento del inglés al español costarricense usando Claude Haiku.
+ * Si la traducción falla, devuelve el nombre original sin romper el flujo.
+ */
+export async function traducirNombreAlimento(nombreIngles: string): Promise<string> {
+  try {
+    const message = await anthropic.messages.create({
+      model:      'claude-haiku-4-5',
+      max_tokens: 60,
+      messages:   [{
+        role:    'user',
+        content: (
+          `Traduce este nombre de alimento del inglés al español de forma simple y natural, ` +
+          `como se diría en Costa Rica. Solo devuelve el nombre traducido, sin explicaciones ni puntos. ` +
+          `Alimento: ${nombreIngles}`
+        ),
+      }],
+    });
+
+    const block = message.content[0];
+    if (block.type !== 'text') return nombreIngles;
+
+    // Quitar comillas o puntos que Claude a veces agrega
+    const traducido = block.text.trim().replace(/^["'.]|["'.]$/g, '').trim();
+    console.log(`[alimentos] traducido: "${nombreIngles}" → "${traducido}"`);
+    return traducido || nombreIngles;
+  } catch (err) {
+    console.error('[alimentos] traducirNombreAlimento falló:', err);
+    return nombreIngles;   // fallback: nombre en inglés
+  }
+}
+
+// ─── 4d. USDA FoodData Central ───────────────────────────────────────────────
 // Usa SR Legacy + Foundation (valores por 100 g garantizados).
 // Nutrient IDs: 1008=kcal, 1003=proteína, 1005=carbos, 1004=grasas, 1079=fibra
 
@@ -369,7 +406,15 @@ export async function importarAlimento(nombre: string): Promise<{
   const usdaData = await buscarEnUSDA(nombre).catch(() => null);
   if (usdaData && (usdaData.calorias100g ?? 0) > 0) {
     try {
-      const saved = await guardarAlimento(nombre, usdaData);
+      // El nombre de USDA viene en inglés — traducir antes de guardar
+      const nombreIngles   = usdaData.nombre ?? nombre;
+      const nombreEspanol  = await traducirNombreAlimento(nombreIngles);
+
+      const saved = await guardarAlimento(nombre, {
+        ...usdaData,
+        nombre:         nombreEspanol,   // nombre en español (el que se muestra)
+        nombreOriginal: nombreIngles,    // nombre original en inglés (guardado aparte)
+      });
       return { importado: true, yaExistia: false, fuente: 'usda', alimento: saved };
     } catch { /* intenta con OFF */ }
   }

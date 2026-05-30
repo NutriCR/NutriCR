@@ -584,6 +584,153 @@ function ModalImportar({
   );
 }
 
+// ─── Modal: Traducir nombres ──────────────────────────────────────────────────
+
+function ModalTraducir({
+  open, onClose, onTraducido,
+}: {
+  open: boolean; onClose: () => void; onTraducido: () => void;
+}) {
+  const [estado,    setEstado]   = useState<'idle' | 'cargando' | 'traduciendo' | 'listo'>('idle');
+  const [pendientes, setPend]    = useState(0);
+  const [total,     setTotal]   = useState(0);
+  const [traducidos, setTrad]   = useState(0);
+
+  // Al abrir: obtener count de alimentos sin traducir
+  useEffect(() => {
+    if (!open) return;
+    setEstado('cargando');
+    setTrad(0);
+    fetch('/api/alimentos/traducir')
+      .then((r) => r.json() as Promise<{ pendientes: number }>)
+      .then((j) => { setPend(j.pendientes); setTotal(j.pendientes); setEstado('idle'); })
+      .catch(() => setEstado('idle'));
+  }, [open]);
+
+  async function handleTraducir() {
+    setEstado('traduciendo');
+    let acum = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      let resp: { traducidos?: number; pendientes?: number };
+      try {
+        const r = await fetch('/api/alimentos/traducir', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ limite: 5 }),
+        });
+        resp = await r.json() as { traducidos?: number; pendientes?: number };
+      } catch {
+        break;
+      }
+
+      acum += resp.traducidos ?? 0;
+      setTrad(acum);
+      setPend(resp.pendientes ?? 0);
+
+      if ((resp.pendientes ?? 0) === 0 || (resp.traducidos ?? 0) === 0) break;
+    }
+
+    setEstado('listo');
+    onTraducido();
+  }
+
+  const pct   = total > 0 ? Math.round((traducidos / total) * 100) : 0;
+
+  return (
+    <ModalBase open={open} onClose={onClose} titulo="Traducir nombres al español">
+      <div className="space-y-4">
+        {estado === 'cargando' ? (
+          <div className="flex items-center justify-center py-8 gap-3">
+            <span className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-slate-500">Verificando alimentos…</p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-slate-50 rounded-xl p-4">
+              <p className="text-sm text-slate-600">
+                Traduce los nombres importados desde USDA (que están en inglés) al español
+                costarricense usando <strong>Claude Haiku</strong>.
+              </p>
+              {estado === 'idle' && (
+                <p className="text-sm mt-2">
+                  {total === 0 ? (
+                    <span className="text-green-600 font-semibold">✓ No hay alimentos pendientes de traducción</span>
+                  ) : (
+                    <span className="text-amber-700 font-semibold">{total} alimentos por traducir</span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Barra de progreso */}
+            {estado === 'traduciendo' && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-semibold text-brand-700">
+                    Traduciendo {traducidos}/{total}…
+                  </span>
+                  <span className="text-slate-400 text-xs">{pct}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full bg-brand-500 rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400 text-center">
+                  Consultando Claude Haiku…
+                </p>
+              </div>
+            )}
+
+            {/* Resultado */}
+            {estado === 'listo' && (
+              <div className="flex gap-3">
+                <div className="flex-1 bg-brand-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-brand-700">{traducidos}</p>
+                  <p className="text-xs text-brand-500 mt-0.5">Traducidos</p>
+                </div>
+                <div className="flex-1 bg-slate-100 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-slate-600">{pendientes}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Pendientes</p>
+                </div>
+              </div>
+            )}
+
+            {estado !== 'listo' ? (
+              <button
+                onClick={handleTraducir}
+                disabled={estado === 'traduciendo' || total === 0}
+                className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors"
+              >
+                {estado === 'traduciendo' ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Traduciendo {traducidos}/{total}…
+                  </span>
+                ) : total === 0 ? (
+                  '✓ Todo traducido'
+                ) : (
+                  `🌐 Traducir ${total} alimentos`
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={onClose}
+                className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors"
+              >
+                Listo — cerrar
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </ModalBase>
+  );
+}
+
 // ─── AlimentoCard ─────────────────────────────────────────────────────────────
 
 function AlimentoCard({ alimento, onClick }: { alimento: Alimento; onClick: () => void }) {
@@ -658,6 +805,7 @@ export default function InventarioPage() {
   const [modalEditar,   setModalEditar]   = useState<Alimento | null>(null);
   const [modalAgregar,  setModalAgregar]  = useState(false);
   const [modalImportar, setModalImportar] = useState(false);
+  const [modalTraducir, setModalTraducir] = useState(false);
 
   // ── Cargar datos ────────────────────────────────────────────────────────────
 
@@ -723,6 +871,12 @@ export default function InventarioPage() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setModalTraducir(true)}
+              className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              🌐 Traducir nombres
+            </button>
             <button
               onClick={() => setModalImportar(true)}
               className="px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
@@ -871,6 +1025,11 @@ export default function InventarioPage() {
         open={modalImportar}
         onClose={() => setModalImportar(false)}
         onImportado={() => cargar(1, busqueda, filtroFuente, filtroValid)}
+      />
+      <ModalTraducir
+        open={modalTraducir}
+        onClose={() => setModalTraducir(false)}
+        onTraducido={() => cargar(page, busqueda, filtroFuente, filtroValid)}
       />
     </div>
   );
