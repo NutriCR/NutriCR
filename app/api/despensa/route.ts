@@ -1,6 +1,57 @@
-import { NextResponse } from 'next/server';
+import { NextResponse }    from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requirePaciente } from '@/lib/supabase/auth-helpers';
+import { requirePaciente }   from '@/lib/supabase/auth-helpers';
+import { buscarAlimento }    from '@/lib/alimentos';
+
+// ─── Helper: enriquecer fila con datos nutricionales ─────────────────────────
+// Llama a buscarAlimento() y actualiza la fila de inventario con los macros +
+// alimento_id. Falla silenciosamente para no bloquear la respuesta principal.
+
+async function enriquecerFila(
+  filaId:   string,
+  nombre:   string,
+  admin:    ReturnType<typeof createAdminClient>,
+): Promise<{
+  calorias_por_100g:     number | null;
+  proteinas_por_100g:    number | null;
+  carbohidratos_por_100g: number | null;
+  grasas_por_100g:       number | null;
+  alimento_id:           string | null;
+}> {
+  try {
+    const datos = await buscarAlimento(nombre);
+
+    const update = {
+      calorias_por_100g:      datos.calorias100g,
+      proteinas_por_100g:     datos.proteina100g,
+      carbohidratos_por_100g: datos.carbos100g,
+      grasas_por_100g:        datos.grasas100g,
+      alimento_id:            datos.id || null,
+    };
+
+    const { error } = await admin
+      .from('inventario')
+      .update(update)
+      .eq('id', filaId);
+
+    if (error) {
+      console.error('[despensa] update nutricional:', error.message);
+    } else {
+      console.log(`[despensa] macros actualizados para "${nombre}" — fuente: ${datos.fuente}`);
+    }
+
+    return update;
+  } catch (err) {
+    console.error('[despensa] enriquecerFila falló:', err);
+    return {
+      calorias_por_100g:      null,
+      proteinas_por_100g:     null,
+      carbohidratos_por_100g: null,
+      grasas_por_100g:        null,
+      alimento_id:            null,
+    };
+  }
+}
 
 // ─── POST /api/despensa ───────────────────────────────────────────────────────
 // Acepta dos formatos:
@@ -10,6 +61,9 @@ import { requirePaciente } from '@/lib/supabase/auth-helpers';
 //
 //  B) Agregado manual (single):
 //     { nombre, cantidad, unidad, categoria, fecha_vencimiento? }
+//
+// En ambos casos, después del INSERT llama a buscarAlimento() para enriquecer
+// con datos nutricionales y alimento_id.
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +79,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    const admin = createAdminClient();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let rows: any[];
@@ -74,7 +129,8 @@ export async function POST(request: Request) {
       }];
     }
 
-    const { data, error } = await createAdminClient()
+    // ── INSERT en inventario ──────────────────────────────────────────────────
+    const { data: insertados, error } = await admin
       .from('inventario')
       .insert(rows)
       .select('id, nombre, stock, unidad_medida, categoria, fecha_vencimiento, created_at');
@@ -84,7 +140,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ insertados: data.length, data }, { status: 201 });
+    // ── Enriquecer con macros (buscarAlimento) en paralelo ───────────────────
+    // Busca en DB local → OpenFoodFacts → Claude y actualiza cada fila.
+    const enriquecidos = await Promise.all(
+      insertados.map(async (fila) => {
+        const macros = await enriquecerFila(fila.id, fila.nombre, admin);
+        return { ...fila, ...macros };
+      }),
+    );
+
+    return NextResponse.json({ insertados: enriquecidos.length, data: enriquecidos }, { status: 201 });
 
   } catch (err) {
     console.error('[despensa] POST catch:', err);
@@ -96,7 +161,8 @@ export async function POST(request: Request) {
 }
 
 // ─── GET /api/despensa ────────────────────────────────────────────────────────
-// Devuelve todos los productos del paciente (escaneados + manuales).
+// Devuelve todos los productos del paciente (escaneados + manuales)
+// incluyendo datos nutricionales y alimento_id.
 
 export async function GET() {
   try {
@@ -111,7 +177,7 @@ export async function GET() {
     const { data, error } = await createAdminClient()
       .from('inventario')
       .select(
-        'id, nombre, stock, unidad_medida, categoria, ' +
+        'id, nombre, stock, unidad_medida, categoria, alimento_id, ' +
         'calorias_por_100g, proteinas_por_100g, carbohidratos_por_100g, grasas_por_100g, ' +
         'fecha_vencimiento, created_at',
       )

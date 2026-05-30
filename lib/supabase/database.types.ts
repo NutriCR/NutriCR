@@ -29,6 +29,51 @@ export interface Database {
     };
 
     Tables: {
+      alimentos: {
+        Row: {
+          id:            string;
+          nombre:        string;
+          codigo_barras: string | null;
+          calorias_100g: number;
+          proteina_100g: number;
+          carbos_100g:   number;
+          grasas_100g:   number;
+          fibra_100g:    number | null;
+          fuente:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          pais:          string | null;
+          imagen_url:    string | null;
+          created_at:    string;
+        };
+        Insert: {
+          id?:            string;
+          nombre:         string;
+          codigo_barras?: string | null;
+          calorias_100g?: number;
+          proteina_100g?: number;
+          carbos_100g?:   number;
+          grasas_100g?:   number;
+          fibra_100g?:    number | null;
+          fuente?:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          pais?:          string | null;
+          imagen_url?:    string | null;
+          created_at?:    string;
+        };
+        Update: {
+          id?:            string;
+          nombre?:        string;
+          codigo_barras?: string | null;
+          calorias_100g?: number;
+          proteina_100g?: number;
+          carbos_100g?:   number;
+          grasas_100g?:   number;
+          fibra_100g?:    number | null;
+          fuente?:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          pais?:          string | null;
+          imagen_url?:    string | null;
+        };
+        Relationships: [];
+      };
+
       usuarios: {
         Row: {
           id: string;
@@ -241,6 +286,7 @@ export interface Database {
           grasas_por_100g: number | null;
           stock: number;
           fecha_vencimiento: string | null;
+          alimento_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -257,6 +303,7 @@ export interface Database {
           grasas_por_100g?: number | null;
           stock?: number;
           fecha_vencimiento?: string | null;
+          alimento_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -273,6 +320,7 @@ export interface Database {
           grasas_por_100g?: number | null;
           stock?: number;
           fecha_vencimiento?: string | null;
+          alimento_id?: string | null;
           updated_at?: string;
         };
         Relationships: [

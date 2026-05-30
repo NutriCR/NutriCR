@@ -18,8 +18,16 @@ interface Producto {
   proteinas_por_100g: number | null;
   carbohidratos_por_100g: number | null;
   grasas_por_100g: number | null;
+  alimento_id: string | null;
   fecha_vencimiento: string | null;
   created_at: string;
+}
+
+interface MacrosTotales {
+  calorias: number;
+  proteina: number;
+  carbos:   number;
+  grasas:   number;
 }
 
 interface FormState {
@@ -64,6 +72,43 @@ const FORM_INICIAL: FormState = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Convierte la cantidad en stock a gramos según la unidad.
+ * Retorna null para unidades que no tienen conversión directa (unidades, tazas).
+ */
+function stockEnGramos(stock: number, unidad: string | null): number | null {
+  switch (unidad) {
+    case 'gramos':  return stock;
+    case 'kg':      return stock * 1000;
+    case 'ml':      return stock;          // aprox: 1 ml ≈ 1 g para líquidos comunes
+    case 'litros':  return stock * 1000;
+    case 'tazas':   return stock * 240;    // 1 taza ≈ 240 g
+    default:        return null;           // 'unidades' u otro
+  }
+}
+
+/**
+ * Calcula las macros totales de un producto según su stock.
+ * Devuelve null si no hay datos nutricionales o la unidad no es convertible.
+ */
+function calcularMacrosTotales(p: Producto): MacrosTotales | null {
+  if (
+    p.calorias_por_100g === null &&
+    p.proteinas_por_100g === null
+  ) return null;
+
+  const gramos = stockEnGramos(p.stock, p.unidad_medida);
+  if (!gramos || gramos <= 0) return null;
+
+  const factor = gramos / 100;
+  return {
+    calorias: Math.round((p.calorias_por_100g      ?? 0) * factor),
+    proteina: Math.round((p.proteinas_por_100g     ?? 0) * factor),
+    carbos:   Math.round((p.carbohidratos_por_100g ?? 0) * factor),
+    grasas:   Math.round((p.grasas_por_100g        ?? 0) * factor),
+  };
+}
 
 function diasHastaVencer(fecha: string): number {
   const hoy = new Date();
@@ -467,6 +512,20 @@ export default function DespensaPage() {
     }
   }
 
+  // ── Totales nutricionales de toda la despensa ─────────────────────────────
+
+  const totalDespensa = productos.reduce<MacrosTotales | null>((acc, p) => {
+    const m = calcularMacrosTotales(p);
+    if (!m) return acc;
+    if (!acc) return { ...m };
+    return {
+      calorias: acc.calorias + m.calorias,
+      proteina: acc.proteina + m.proteina,
+      carbos:   acc.carbos   + m.carbos,
+      grasas:   acc.grasas   + m.grasas,
+    };
+  }, null);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const proxAVencer = productos.filter(
@@ -550,14 +609,10 @@ export default function DespensaPage() {
       {!loading && productos.length > 0 && (
         <div className="space-y-3">
           {productos.map((p) => {
-            const tieneMacros =
-              p.calorias_por_100g      !== null ||
-              p.proteinas_por_100g     !== null ||
-              p.carbohidratos_por_100g !== null ||
-              p.grasas_por_100g        !== null;
-
+            const macrosTotales  = calcularMacrosTotales(p);
+            const tienePor100g   = p.calorias_por_100g !== null || p.proteinas_por_100g !== null;
             const estaEliminando = eliminando === p.id;
-            const emoji = CATEGORIA_EMOJI[p.categoria ?? ''] ?? '🛒';
+            const emoji          = CATEGORIA_EMOJI[p.categoria ?? ''] ?? '🛒';
 
             return (
               <Card
@@ -595,38 +650,55 @@ export default function DespensaPage() {
                       )}
                     </p>
 
-                    {/* Macros — solo si existen */}
-                    {tieneMacros && (
+                    {/* Macros TOTALES del stock (calorías/100g × gramos en stock) */}
+                    {macrosTotales && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                        <span className="text-xs text-slate-500">
+                          🔥 <span className="font-semibold text-slate-700">{macrosTotales.calorias}</span> kcal
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          💪 <span className="font-semibold text-blue-600">{macrosTotales.proteina}g</span> prot
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          🌾 <span className="font-semibold text-amber-600">{macrosTotales.carbos}g</span> carb
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          🥑 <span className="font-semibold text-rose-600">{macrosTotales.grasas}g</span> gras
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Fallback: valores por 100g cuando la unidad no es convertible */}
+                    {!macrosTotales && tienePor100g && (
                       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                         {p.calorias_por_100g !== null && (
-                          <span className="text-xs text-slate-500">
-                            🔥{' '}
-                            <span className="font-medium text-slate-700">{p.calorias_por_100g}</span>{' '}
-                            kcal
+                          <span className="text-xs text-slate-400">
+                            🔥 <span className="font-medium">{p.calorias_por_100g}</span> kcal/100g
                           </span>
                         )}
                         {p.proteinas_por_100g !== null && (
-                          <span className="text-xs text-slate-500">
-                            💪{' '}
-                            <span className="font-medium text-blue-600">{p.proteinas_por_100g}g</span>{' '}
-                            prot
+                          <span className="text-xs text-slate-400">
+                            💪 <span className="font-medium">{p.proteinas_por_100g}g</span> prot/100g
                           </span>
                         )}
                         {p.carbohidratos_por_100g !== null && (
-                          <span className="text-xs text-slate-500">
-                            🌾{' '}
-                            <span className="font-medium text-amber-600">{p.carbohidratos_por_100g}g</span>{' '}
-                            carb
+                          <span className="text-xs text-slate-400">
+                            🌾 <span className="font-medium">{p.carbohidratos_por_100g}g</span> carb/100g
                           </span>
                         )}
                         {p.grasas_por_100g !== null && (
-                          <span className="text-xs text-slate-500">
-                            🥑{' '}
-                            <span className="font-medium text-rose-600">{p.grasas_por_100g}g</span>{' '}
-                            gras
+                          <span className="text-xs text-slate-400">
+                            🥑 <span className="font-medium">{p.grasas_por_100g}g</span> gras/100g
                           </span>
                         )}
                       </div>
+                    )}
+
+                    {/* Badge fuente (si tiene alimento_id = datos encontrados) */}
+                    {p.alimento_id && (
+                      <span className="inline-block mt-1.5 text-[10px] text-brand-500 font-medium">
+                        ✓ datos nutricionales
+                      </span>
                     )}
                   </div>
 
@@ -648,6 +720,36 @@ export default function DespensaPage() {
             );
           })}
         </div>
+      )}
+
+      {/* ── Resumen nutricional total de la despensa ── */}
+      {!loading && totalDespensa && (
+        <Card className="p-4 bg-gradient-to-br from-brand-500 to-brand-700 text-white border-0 shadow-lg">
+          <p className="text-sm font-semibold text-white/80 mb-3">
+            📊 Total nutricional de tu despensa
+          </p>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-2xl font-bold">{totalDespensa.calorias.toLocaleString('es-CR')}</p>
+              <p className="text-xs text-white/70 mt-0.5">kcal</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalDespensa.proteina}g</p>
+              <p className="text-xs text-white/70 mt-0.5">proteína</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalDespensa.carbos}g</p>
+              <p className="text-xs text-white/70 mt-0.5">carbos</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalDespensa.grasas}g</p>
+              <p className="text-xs text-white/70 mt-0.5">grasas</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-white/50 text-center mt-3">
+            Suma de los productos con cantidad en gramos, kg, ml o litros
+          </p>
+        </Card>
       )}
 
       {/* ── FAB "+" → abre modal ── */}
