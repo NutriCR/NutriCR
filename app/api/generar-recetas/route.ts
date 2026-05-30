@@ -45,6 +45,8 @@ export async function GET() {
     const { pacienteId } = auth.data;
     const hoy = hoyEnCR();
 
+    console.log(`[generar-recetas] GET — pacienteId: ${pacienteId} — fecha: ${hoy}`);
+
     const { data, error } = await createAdminClient()
       .from('recetas_generadas')
       .select('menu, created_at')
@@ -54,8 +56,16 @@ export async function GET() {
       .maybeSingle();
 
     if (error) {
-      console.error('[generar-recetas] GET error:', error);
-      return NextResponse.json({ menu: null });
+      console.error('[generar-recetas] GET Supabase error — code:', error.code);
+      console.error('[generar-recetas] GET Supabase error — message:', error.message);
+      console.error('[generar-recetas] GET Supabase error — hint:', error.hint);
+      return NextResponse.json({ menu: null, debugError: error.message });
+    }
+
+    if (data?.menu) {
+      console.log('[generar-recetas] GET — menú encontrado para hoy ✓');
+    } else {
+      console.log('[generar-recetas] GET — no hay menú guardado para hoy');
     }
 
     return NextResponse.json({

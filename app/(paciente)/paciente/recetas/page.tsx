@@ -211,18 +211,37 @@ export default function RecetasPage() {
 
   useEffect(() => {
     async function verificarMenuHoy() {
+      console.log('[recetas] Verificando si existe menú guardado para hoy…');
       try {
-        const res  = await fetch('/api/generar-recetas');
-        const json = await res.json() as { menu: Record<string, unknown> | null };
+        const res  = await fetch('/api/generar-recetas', {
+          method: 'GET',
+          cache:  'no-store',          // nunca usar caché: cada visita consulta Supabase
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const json = await res.json() as {
+          menu:        Record<string, unknown> | null;
+          fecha?:      string;
+          debugError?: string;
+        };
+
+        console.log('[recetas] GET /api/generar-recetas →', {
+          status:     res.status,
+          tieneMenu:  !!json.menu,
+          fecha:      json.fecha,
+          debugError: json.debugError,
+        });
 
         if (json.menu) {
+          console.log('[recetas] Menú encontrado — mostrando sin llamar a IA ✓');
           setMenu(normalizarMenu(json.menu));
           setEstado('listo');
         } else {
+          console.log('[recetas] Sin menú guardado — mostrando botón Generar');
           setEstado('idle');
         }
-      } catch {
-        // Si falla la verificación, ir directo al estado idle
+      } catch (err) {
+        console.error('[recetas] Error al consultar menú del día:', err);
+        // Si falla la verificación, ir al estado idle para que el usuario pueda generar
         setEstado('idle');
       }
     }
