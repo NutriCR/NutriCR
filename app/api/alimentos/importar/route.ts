@@ -1,26 +1,18 @@
 import { NextResponse }     from 'next/server';
 import { requireNutriologo } from '@/lib/supabase/auth-helpers';
-import { importarDesdeOFF }  from '@/lib/alimentos';
-
-// ─── Lista de alimentos comunes de Costa Rica ─────────────────────────────────
-
-const LISTA_CR = [
-  'arroz blanco', 'frijoles negros', 'frijoles rojos', 'pollo cocido', 'carne molida',
-  'huevo', 'leche entera', 'queso', 'natilla', 'pan blanco',
-  'tortilla de maíz', 'plátano maduro', 'plátano verde', 'yuca', 'papa',
-  'zanahoria', 'chayote', 'ayote', 'tomate', 'cebolla',
-  'chile dulce', 'ajo', 'culantro', 'apio', 'limón',
-  'naranja', 'banano', 'mango', 'piña', 'sandía',
-  'atún en lata', 'sardina', 'jamón', 'mortadela', 'salchicha',
-  'aceite vegetal', 'mantequilla', 'azúcar', 'sal', 'avena',
-  'pasta', 'espagueti', 'lechuga', 'pepino', 'brócoli',
-  'coliflor', 'elote', 'palmito', 'pejibaye', 'cas',
-];
+import { importarAlimento }  from '@/lib/alimentos';
+import { LISTA_CR }          from '@/lib/lista-alimentos-cr';
 
 // ─── POST /api/alimentos/importar ────────────────────────────────────────────
-// Importa alimentos desde OpenFoodFacts en lotes.
-// Body: { nombres?: string[] }  — omitir para usar la lista CR completa.
-// Devuelve conteo de importados, ya existentes y no encontrados.
+// Importa un lote de alimentos usando USDA como fuente primaria y
+// OpenFoodFacts como fallback. El cliente envía lotes pequeños (ej. 5 nombres)
+// para poder mostrar progreso en tiempo real.
+//
+// Body: { nombres?: string[] }
+//   · Si se envía nombres → procesa ese lote (flujo batch del cliente)
+//   · Si se omite        → procesa toda la LISTA_CR (una sola llamada)
+//
+// Returns: { importados, yaExistentes, noEncontrados, total }
 
 export async function POST(request: Request) {
   try {
@@ -28,17 +20,17 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const body = await request.json().catch(() => ({})) as { nombres?: string[] };
-    const nombres = Array.isArray(body.nombres) ? body.nombres : LISTA_CR;
+    const nombres: string[] = Array.isArray(body.nombres) ? body.nombres : [...LISTA_CR];
 
-    // Procesar todos en paralelo (OFF es rápido; sin Claude como fallback)
+    // Procesar el lote en paralelo (USDA es rápido con dataType filtrado)
     const resultados = await Promise.allSettled(
-      nombres.map((n) => importarDesdeOFF(n)),
+      nombres.map((n) => importarAlimento(n)),
     );
 
     let importados    = 0;
     let yaExistentes  = 0;
     let noEncontrados = 0;
-    const fallidos: string[] = [];
+    const fallidos:   string[] = [];
 
     resultados.forEach((r, i) => {
       if (r.status === 'rejected') {
@@ -46,7 +38,7 @@ export async function POST(request: Request) {
         fallidos.push(nombres[i]);
         return;
       }
-      if (r.value.importado)    importados++;
+      if (r.value.importado)      importados++;
       else if (r.value.yaExistia) yaExistentes++;
       else {
         noEncontrados++;
@@ -54,7 +46,10 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`[importar] importados=${importados} existentes=${yaExistentes} no_encontrados=${noEncontrados}`);
+    console.log(
+      `[importar] lote=${nombres.length} | importados=${importados}` +
+      ` | existentes=${yaExistentes} | no_encontrados=${noEncontrados}`,
+    );
 
     return NextResponse.json({
       importados,

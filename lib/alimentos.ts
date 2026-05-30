@@ -255,6 +255,62 @@ async function guardarAlimento(
   return mapRow(data as Record<string, unknown>);
 }
 
+// ─── 4b. USDA FoodData Central ───────────────────────────────────────────────
+// Usa SR Legacy + Foundation (valores por 100 g garantizados).
+// Nutrient IDs: 1008=kcal, 1003=proteína, 1005=carbos, 1004=grasas, 1079=fibra
+
+async function buscarEnUSDA(nombre: string): Promise<Partial<DatosNutricionales> | null> {
+  const apiKey = process.env.USDA_API_KEY;
+  if (!apiKey) {
+    console.warn('[alimentos] USDA_API_KEY no configurada — saltando USDA');
+    return null;
+  }
+
+  try {
+    const q   = encodeURIComponent(nombre);
+    const url =
+      `https://api.nal.usda.gov/fdc/v1/foods/search` +
+      `?query=${q}&api_key=${apiKey}&dataType=SR%20Legacy,Foundation&pageSize=1`;
+
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      console.error('[alimentos] USDA HTTP error:', res.status);
+      return null;
+    }
+
+    const json = await res.json() as {
+      foods?: Array<{
+        description: string;
+        foodNutrients: Array<{ nutrientId: number; value: number }>;
+      }>;
+    };
+
+    const food = json.foods?.[0];
+    if (!food) return null;
+
+    const get = (id: number): number =>
+      food.foodNutrients.find((n) => n.nutrientId === id)?.value ?? 0;
+
+    const calorias = get(1008);
+    if (calorias === 0) return null;   // datos insuficientes
+
+    console.log('[alimentos] USDA encontrado:', food.description);
+
+    return {
+      nombre:       food.description,
+      calorias100g: Math.round(calorias    * 10) / 10,
+      proteina100g: Math.round(get(1003)   * 10) / 10,
+      carbos100g:   Math.round(get(1005)   * 10) / 10,
+      grasas100g:   Math.round(get(1004)   * 10) / 10,
+      fibra100g:    get(1079) > 0 ? Math.round(get(1079) * 10) / 10 : null,
+      fuente:       'usda',
+    };
+  } catch (err) {
+    console.error('[alimentos] USDA error:', err);
+    return null;
+  }
+}
+
 // ─── Exports adicionales (sin guardar en DB) ─────────────────────────────────
 
 /**
@@ -271,17 +327,16 @@ export async function buscarEnOFF(nombre: string): Promise<Partial<DatosNutricio
  * Importa un alimento desde OpenFoodFacts (sin Claude como fallback).
  * Si el alimento ya existe localmente, lo retorna como existente.
  * Si no está en OFF, devuelve { importado: false }.
+ * @deprecated Preferir importarAlimento() que usa USDA como fuente primaria.
  */
 export async function importarDesdeOFF(nombre: string): Promise<{
   importado: boolean;
   yaExistia: boolean;
   alimento?: DatosNutricionales;
 }> {
-  // Verificar si ya existe
   const local = await buscarEnLocal(nombre).catch(() => null);
   if (local) return { importado: false, yaExistia: true, alimento: local };
 
-  // Solo OFF — sin Claude
   const offData = await buscarOFFNombre(nombre).catch(() => null);
   if (!offData || (offData.calorias100g ?? 0) === 0) {
     return { importado: false, yaExistia: false };
@@ -293,6 +348,42 @@ export async function importarDesdeOFF(nombre: string): Promise<{
   } catch {
     return { importado: false, yaExistia: false };
   }
+}
+
+/**
+ * Importa un alimento usando USDA como fuente primaria y OFF como fallback.
+ * Sin Claude — solo fuentes oficiales de datos nutricionales.
+ * Orden: DB local → USDA FoodData Central → OpenFoodFacts
+ */
+export async function importarAlimento(nombre: string): Promise<{
+  importado: boolean;
+  yaExistia: boolean;
+  fuente?: 'usda' | 'openfoodfacts';
+  alimento?: DatosNutricionales;
+}> {
+  // 1. Cache local
+  const local = await buscarEnLocal(nombre).catch(() => null);
+  if (local) return { importado: false, yaExistia: true, alimento: local };
+
+  // 2. USDA (fuente primaria — datos por 100g garantizados)
+  const usdaData = await buscarEnUSDA(nombre).catch(() => null);
+  if (usdaData && (usdaData.calorias100g ?? 0) > 0) {
+    try {
+      const saved = await guardarAlimento(nombre, usdaData);
+      return { importado: true, yaExistia: false, fuente: 'usda', alimento: saved };
+    } catch { /* intenta con OFF */ }
+  }
+
+  // 3. Fallback: OpenFoodFacts
+  const offData = await buscarOFFNombre(nombre).catch(() => null);
+  if (offData && (offData.calorias100g ?? 0) > 0) {
+    try {
+      const saved = await guardarAlimento(nombre, offData);
+      return { importado: true, yaExistia: false, fuente: 'openfoodfacts', alimento: saved };
+    } catch { /* fall through */ }
+  }
+
+  return { importado: false, yaExistia: false };
 }
 
 // ─── Función principal ────────────────────────────────────────────────────────

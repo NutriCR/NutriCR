@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Card from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { LISTA_CR } from '@/lib/lista-alimentos-cr';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -438,59 +439,103 @@ function ModalAgregar({
 
 // ─── Modal: Importar alimentos base ──────────────────────────────────────────
 
+const IMPORT_BATCH = 5;   // items por request al servidor
+
 function ModalImportar({
   open, onClose, onImportado,
 }: {
   open: boolean; onClose: () => void; onImportado: () => void;
 }) {
-  const [estado, setEstado]   = useState<'idle' | 'importando' | 'listo'>('idle');
-  const [resultado, setRes]   = useState<{ importados: number; yaExistentes: number; noEncontrados: number; total: number } | null>(null);
+  const [estado,    setEstado]  = useState<'idle' | 'importando' | 'listo'>('idle');
+  const [progreso,  setProgreso] = useState<{ procesados: number; total: number }>({ procesados: 0, total: LISTA_CR.length });
+  const [resultado, setRes]     = useState<{
+    importados: number; yaExistentes: number; noEncontrados: number;
+  } | null>(null);
+  const abortRef = useRef(false);
 
   useEffect(() => {
-    if (open) { setEstado('idle'); setRes(null); }
+    if (open) { setEstado('idle'); setRes(null); setProgreso({ procesados: 0, total: LISTA_CR.length }); abortRef.current = false; }
   }, [open]);
 
   async function handleImportar() {
     setEstado('importando');
-    try {
-      const res  = await fetch('/api/alimentos/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const json = await res.json();
-      setRes(json);
-      setEstado('listo');
-      onImportado();
-    } catch {
-      setEstado('idle');
+    abortRef.current = false;
+
+    let importados    = 0;
+    let yaExistentes  = 0;
+    let noEncontrados = 0;
+
+    // Procesar la lista en lotes de IMPORT_BATCH para mostrar progreso real
+    const lista = [...LISTA_CR];
+    for (let i = 0; i < lista.length; i += IMPORT_BATCH) {
+      if (abortRef.current) break;
+
+      const batch = lista.slice(i, i + IMPORT_BATCH);
+      try {
+        const res  = await fetch('/api/alimentos/importar', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ nombres: batch }),
+        });
+        const json = await res.json() as { importados?: number; yaExistentes?: number; noEncontrados?: number };
+        importados    += json.importados    ?? 0;
+        yaExistentes  += json.yaExistentes  ?? 0;
+        noEncontrados += json.noEncontrados ?? 0;
+      } catch { /* skip lote con error */ }
+
+      setProgreso({ procesados: Math.min(i + IMPORT_BATCH, lista.length), total: lista.length });
     }
+
+    setRes({ importados, yaExistentes, noEncontrados });
+    setEstado('listo');
+    onImportado();
   }
+
+  // Porcentaje para la barra de progreso
+  const pct = progreso.total > 0
+    ? Math.round((progreso.procesados / progreso.total) * 100)
+    : 0;
 
   return (
     <ModalBase open={open} onClose={onClose} titulo="Importar alimentos base">
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
-          Importa los alimentos más comunes de Costa Rica consultando OpenFoodFacts.
-          Los que no se encuentren allí <strong>no se importarán</strong> (sin estimación por IA).
+          Busca <strong>{LISTA_CR.length} alimentos</strong> costarricenses en
+          {' '}<strong>USDA FoodData Central</strong> (fuente primaria) con
+          {' '}<strong>OpenFoodFacts</strong> como respaldo.
+          Solo fuentes oficiales — sin estimación por IA.
         </p>
 
-        <div className="bg-slate-50 rounded-xl p-3 max-h-40 overflow-y-auto">
-          <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">50 alimentos de la lista</p>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            arroz blanco · frijoles negros · frijoles rojos · pollo cocido · carne molida ·
-            huevo · leche · queso · natilla · pan blanco · tortilla de maíz · plátano maduro ·
-            plátano verde · yuca · papa · zanahoria · chayote · ayote · tomate · cebolla ·
-            chile dulce · ajo · culantro · apio · limón · naranja · banano · mango · piña ·
-            sandía · atún · sardina · jamón · mortadela · salchicha · aceite · mantequilla ·
-            azúcar · sal · avena · pasta · espagueti · lechuga · pepino · brócoli ·
-            coliflor · elote · palmito · pejibaye · cas
+        {/* Lista compacta de alimentos */}
+        <div className="bg-slate-50 rounded-xl p-3 max-h-32 overflow-y-auto">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {LISTA_CR.join(' · ')}
           </p>
         </div>
 
+        {/* Progreso (solo durante importación) */}
         {estado === 'importando' && (
-          <div className="flex items-center gap-3 py-4 justify-center">
-            <span className="w-6 h-6 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" style={{ borderWidth: 3 }} />
-            <p className="text-sm text-brand-600 font-medium">Consultando OpenFoodFacts… puede tomar 10-20 segundos</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-brand-700">
+                Importando {progreso.procesados}/{progreso.total}…
+              </span>
+              <span className="text-slate-400 text-xs">{pct}%</span>
+            </div>
+            {/* Barra de progreso */}
+            <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className="h-full bg-brand-500 rounded-full transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-400 text-center">
+              Consultando USDA y OpenFoodFacts…
+            </p>
           </div>
         )}
 
+        {/* Resultado */}
         {estado === 'listo' && resultado && (
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-brand-50 rounded-xl p-3 text-center">
@@ -503,18 +548,26 @@ function ModalImportar({
             </div>
             <div className="bg-amber-50 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-amber-600">{resultado.noEncontrados}</p>
-              <p className="text-xs text-amber-500 mt-0.5">No encontrados</p>
+              <p className="text-xs text-amber-500 mt-0.5">No en USDA/OFF</p>
             </div>
           </div>
         )}
 
+        {/* Botones */}
         {estado !== 'listo' && (
           <button
             onClick={handleImportar}
             disabled={estado === 'importando'}
-            className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-bold text-sm transition-colors"
+            className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors"
           >
-            {estado === 'importando' ? 'Importando…' : '⬇ Importar alimentos base'}
+            {estado === 'importando' ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Procesando {progreso.procesados}/{progreso.total}…
+              </span>
+            ) : (
+              '⬇ Importar alimentos base'
+            )}
           </button>
         )}
 
@@ -523,7 +576,7 @@ function ModalImportar({
             onClick={onClose}
             className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors"
           >
-            Cerrar
+            Listo — cerrar
           </button>
         )}
       </div>
