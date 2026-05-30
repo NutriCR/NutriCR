@@ -20,15 +20,6 @@ const nextConfig = {
     // Next.js 14.2 still uses this key (renamed to serverExternalPackages in Next.js 15)
     serverComponentsExternalPackages: ['@anthropic-ai/sdk', 'web-push'],
   },
-  // Aumenta el límite del body parser para rutas API (Pages Router y dev server).
-  // Para App Router Route Handlers el límite real lo controla el servidor/Vercel,
-  // pero la compresión en el cliente mantiene los uploads por debajo de ~1 MB.
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-    responseLimit: '10mb',
-  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.supabase.co' },

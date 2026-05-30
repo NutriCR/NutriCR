@@ -4,7 +4,7 @@ import { importarDesdeOFF }  from '@/lib/alimentos';
 
 // ─── Lista de alimentos comunes de Costa Rica ─────────────────────────────────
 
-export const LISTA_CR = [
+const LISTA_CR = [
   'arroz blanco', 'frijoles negros', 'frijoles rojos', 'pollo cocido', 'carne molida',
   'huevo', 'leche entera', 'queso', 'natilla', 'pan blanco',
   'tortilla de maíz', 'plátano maduro', 'plátano verde', 'yuca', 'papa',
