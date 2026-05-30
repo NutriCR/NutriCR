@@ -144,27 +144,43 @@ export async function POST() {
 
     // 5. Persistir en recetas_generadas
     //    Primero borrar el menú existente de hoy (si el paciente está regenerando)
-    await admin
+    const { error: deleteErr, count: deleteCount } = await admin
       .from('recetas_generadas')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('paciente_id', pacienteId)
       .eq('fecha', hoy)
       .is('tipo_comida', null);
 
-    const { error: insertErr } = await admin
+    if (deleteErr) {
+      console.error('[generar-recetas] delete error:', deleteErr);
+    } else {
+      console.log(`[generar-recetas] delete OK — filas eliminadas: ${deleteCount ?? 0}`);
+    }
+
+    const insertPayload = {
+      paciente_id:     pacienteId,
+      nombre:          `menu_diario_${hoy}`,
+      generada_por_ia: true,
+      tipo_comida:     null,          // null = menú completo del día
+      fecha:           hoy,
+      menu:            JSON.parse(JSON.stringify(parsed.menu)),
+    };
+    console.log('[generar-recetas] insert payload keys:', Object.keys(insertPayload));
+
+    const { error: insertErr, data: insertData } = await admin
       .from('recetas_generadas')
-      .insert({
-        paciente_id:     pacienteId,
-        nombre:          `menu_diario_${hoy}`,
-        generada_por_ia: true,
-        tipo_comida:     null,          // null = menú completo del día
-        fecha:           hoy,
-        menu:            JSON.parse(JSON.stringify(parsed.menu)),
-      });
+      .insert(insertPayload)
+      .select('id, fecha')
+      .single();
 
     if (insertErr) {
       // No bloqueamos la respuesta — el menú igual se devuelve al cliente
-      console.error('[generar-recetas] insert recetas_generadas:', insertErr);
+      console.error('[generar-recetas] insert ERROR — code:', insertErr.code);
+      console.error('[generar-recetas] insert ERROR — message:', insertErr.message);
+      console.error('[generar-recetas] insert ERROR — details:', insertErr.details);
+      console.error('[generar-recetas] insert ERROR — hint:', insertErr.hint);
+    } else {
+      console.log('[generar-recetas] insert OK — id:', insertData?.id, '— fecha:', insertData?.fecha);
     }
 
     return NextResponse.json({
