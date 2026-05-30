@@ -40,6 +40,7 @@ export interface Database {
           grasas_100g:   number;
           fibra_100g:    number | null;
           fuente:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          validado:      boolean;
           pais:          string | null;
           imagen_url:    string | null;
           created_at:    string;
@@ -54,6 +55,7 @@ export interface Database {
           grasas_100g?:   number;
           fibra_100g?:    number | null;
           fuente?:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          validado?:      boolean;
           pais?:          string | null;
           imagen_url?:    string | null;
           created_at?:    string;
@@ -68,6 +70,7 @@ export interface Database {
           grasas_100g?:   number;
           fibra_100g?:    number | null;
           fuente?:        'openfoodfacts' | 'usda' | 'manual' | 'ia';
+          validado?:      boolean;
           pais?:          string | null;
           imagen_url?:    string | null;
         };

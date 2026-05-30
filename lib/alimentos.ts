@@ -255,6 +255,46 @@ async function guardarAlimento(
   return mapRow(data as Record<string, unknown>);
 }
 
+// ─── Exports adicionales (sin guardar en DB) ─────────────────────────────────
+
+/**
+ * Busca en OpenFoodFacts por nombre sin guardar en DB.
+ * Usado para pre-llenar formularios del nutricionista.
+ */
+export async function buscarEnOFF(nombre: string): Promise<Partial<DatosNutricionales> | null> {
+  const datos = await buscarOFFNombre(nombre).catch(() => null);
+  if (!datos || (datos.calorias100g ?? 0) === 0) return null;
+  return datos;
+}
+
+/**
+ * Importa un alimento desde OpenFoodFacts (sin Claude como fallback).
+ * Si el alimento ya existe localmente, lo retorna como existente.
+ * Si no está en OFF, devuelve { importado: false }.
+ */
+export async function importarDesdeOFF(nombre: string): Promise<{
+  importado: boolean;
+  yaExistia: boolean;
+  alimento?: DatosNutricionales;
+}> {
+  // Verificar si ya existe
+  const local = await buscarEnLocal(nombre).catch(() => null);
+  if (local) return { importado: false, yaExistia: true, alimento: local };
+
+  // Solo OFF — sin Claude
+  const offData = await buscarOFFNombre(nombre).catch(() => null);
+  if (!offData || (offData.calorias100g ?? 0) === 0) {
+    return { importado: false, yaExistia: false };
+  }
+
+  try {
+    const saved = await guardarAlimento(nombre, offData);
+    return { importado: true, yaExistia: false, alimento: saved };
+  } catch {
+    return { importado: false, yaExistia: false };
+  }
+}
+
 // ─── Función principal ────────────────────────────────────────────────────────
 
 /**
