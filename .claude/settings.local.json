@@ -45,7 +45,8 @@
       "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/macdejose/NutriCR/public/manifest.json'\\)\\); [print\\(i['src'], i['sizes']\\) for i in d['icons']]\")",
       "Bash(grep -E \"^sharp$|^canvas$|^jimp$|^svg2img$\")",
       "Bash(npm list *)",
-      "Bash(sort -k5 -h)"
+      "Bash(sort -k5 -h)",
+      "Bash(git -C /Users/macdejose/NutriCR add 'app/\\(paciente\\)/paciente/despensa/page.tsx' app/api/despensa/route.ts lib/supabase/database.types.ts lib/alimentos.ts supabase/migration_20250529_alimentos.sql)"
     ]
   }
 }
